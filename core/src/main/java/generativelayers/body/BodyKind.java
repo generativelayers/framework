@@ -1,0 +1,5 @@
+package generativelayers.body;
+
+public enum BodyKind {
+    LLM, RAG, PLANNER, TOOL_PROPOSER, MEMORY, REFLECTOR, ASSESSOR, HUMAN_REVIEW, CUSTOM
+}

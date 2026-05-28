@@ -4,20 +4,43 @@
          xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
     <modelVersion>4.0.0</modelVersion>
 
-    <groupId>layer</groupId>
+    <groupId>generativelayers</groupId>
     <artifactId>core</artifactId>
     <version>0.1.0-SNAPSHOT</version>
+    <packaging>jar</packaging>
+
+    <name>Generative Layers Core</name>
+    <description>
+        Generative Resource Layer framework for BDI agents: kernel (semantic model,
+        governance, validation, traceability), generative body layer, provider registry,
+        and platform adapters (ASTRA, Jason, JaCaMo).
+    </description>
+    <url>https://www.generativelayers.com</url>
+
+    <licenses>
+        <license>
+            <name>Apache License, Version 2.0</name>
+            <url>https://www.apache.org/licenses/LICENSE-2.0</url>
+            <distribution>repo</distribution>
+        </license>
+    </licenses>
+
+    <organization>
+        <name>Generative Layers</name>
+        <url>https://github.com/generativelayers</url>
+    </organization>
+
+    <scm>
+        <url>https://github.com/generativelayers/framework</url>
+        <connection>scm:git:git://github.com/generativelayers/framework.git</connection>
+        <developerConnection>scm:git:git@github.com:generativelayers/framework.git</developerConnection>
+    </scm>
 
     <properties>
         <maven.compiler.release>17</maven.compiler.release>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
+        <astra.version>2.0.12</astra.version>
     </properties>
-    <name>Core</name>
-    <description>
-        Generative Resource Layer framework: kernel (semantic model, governance,
-        validation, traceability), generative body layer, provider registry,
-        and platform adapters (ASTRA, Jason).
-    </description>
 
     <repositories>
         <repository>
@@ -35,8 +58,52 @@
         <dependency>
             <groupId>com.astralanguage</groupId>
             <artifactId>astra-apis</artifactId>
-            <version>2.0.12</version>
+            <version>${astra.version}</version>
             <scope>provided</scope>
         </dependency>
     </dependencies>
+
+    <build>
+        <plugins>
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-compiler-plugin</artifactId>
+                <version>3.13.0</version>
+                <configuration>
+                    <release>${maven.compiler.release}</release>
+                </configuration>
+            </plugin>
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-jar-plugin</artifactId>
+                <version>3.4.1</version>
+            </plugin>
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-source-plugin</artifactId>
+                <version>3.3.1</version>
+                <executions>
+                    <execution>
+                        <id>attach-sources</id>
+                        <goals><goal>jar-no-fork</goal></goals>
+                    </execution>
+                </executions>
+            </plugin>
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-javadoc-plugin</artifactId>
+                <version>3.6.3</version>
+                <configuration>
+                    <failOnError>false</failOnError>
+                    <doclint>none</doclint>
+                </configuration>
+                <executions>
+                    <execution>
+                        <id>attach-javadocs</id>
+                        <goals><goal>jar</goal></goals>
+                    </execution>
+                </executions>
+            </plugin>
+        </plugins>
+    </build>
 </project>

@@ -1,0 +1,15 @@
+package generativelayers.kernel;
+
+public enum BlobType {
+    PROMPT,
+    GENERATIVE_OUTPUT,
+    STRUCTURED_OUTPUT,
+    EVIDENCE,
+    BELIEF_SNAPSHOT,
+    MEMORY_EPISODE,
+    TOOL_RESULT,
+    ASSESSMENT_REPORT,
+    REFLECTION_NOTE,
+    TRACE,
+    EXPLANATION
+}
