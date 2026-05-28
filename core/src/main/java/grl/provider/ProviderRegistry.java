@@ -1,0 +1,162 @@
+package grl.provider;
+
+import grl.kernel.KernelDefaults;
+import grl.kernel.KernelPorts;
+
+import java.lang.reflect.Method;
+import java.util.Map;
+import java.util.Set;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.function.Function;
+
+/**
+ * Abstract registry mapping provider names to factory functions.
+ *
+ * <p>This class is the <b>only</b> integration point between the abstract
+ * framework and concrete provider implementations. It uses <b>reflection</b>
+ * for built-in providers, so it never imports concrete classes at compile time.
+ *
+ * <h3>Built-in convention</h3>
+ * Each built-in provider class must have a public static method:
+ * <pre>
+ *   public static GenerativeProvider create(ProviderConfig config)
+ * </pre>
+ *
+ * <h3>Custom providers</h3>
+ * <pre>
+ *   ProviderRegistry.register("my-llm", config -&gt; new MyLlmProvider(config));
+ * </pre>
+ *
+ * <h3>Usage from ASTRA</h3>
+ * <pre>
+ *   grl.configure("provider", "gemini");
+ *   grl.configure("model", "gemini-2.5-flash");
+ *   grl.useProvider();
+ * </pre>
+ */
+public final class ProviderRegistry {
+    private ProviderRegistry() {}
+
+    // ── Custom factories (registered at runtime) ────────────────
+
+    private static final Map<String, Function<ProviderConfig, KernelPorts.GenerativeProvider>>
+            CUSTOM = new ConcurrentHashMap<>();
+
+    // ── Built-in provider class names (resolved via reflection) ─
+
+    private static final Map<String, String> BUILT_IN = Map.of(
+            "gemini", "grl.provider.gemini.GeminiProvider",
+            "openai", "grl.provider.openai.OpenAiCompatibleProvider"
+    );
+
+    /**
+     * Register a custom provider factory by name.
+     *
+     * @param name    short name (e.g. "claude", "ollama")
+     * @param factory function that takes a {@link ProviderConfig} and
+     *                returns a {@link KernelPorts.GenerativeProvider}
+     */
+    public static void register(String name,
+                                Function<ProviderConfig, KernelPorts.GenerativeProvider> factory) {
+        CUSTOM.put(name.toLowerCase(), factory);
+    }
+
+    /**
+     * Create a provider instance by name with the given configuration.
+     *
+     * <p>Resolution order:
+     * <ol>
+     *   <li>"fake" / "deterministic" → built-in fake provider</li>
+     *   <li>Custom registry (registered via {@link #register})</li>
+     *   <li>Built-in class name map (resolved via reflection)</li>
+     * </ol>
+     *
+     * @throws IllegalArgumentException if the provider name is unknown
+     */
+    public static KernelPorts.GenerativeProvider create(String name, ProviderConfig config) {
+        String key = name.toLowerCase();
+
+        // 1. Built-in fake
+        if ("fake".equals(key) || "deterministic".equals(key)) {
+            return new KernelDefaults.DeterministicFakeProvider();
+        }
+
+        // 2. Custom registry
+        Function<ProviderConfig, KernelPorts.GenerativeProvider> custom = CUSTOM.get(key);
+        if (custom != null) return custom.apply(config);
+
+        // 3. Built-in via reflection
+        String className = BUILT_IN.get(key);
+        if (className != null) {
+            return createViaReflection(className, config);
+        }
+
+        throw new IllegalArgumentException(
+                "[GRL] Unknown provider: '" + name + "'. "
+              + "Available: " + available());
+    }
+
+    /**
+     * Auto-detect which provider to use based on config and environment.
+     *
+     * <p>If config has a "provider" key, use that. Otherwise check
+     * env vars for available API keys. Falls back to fake.
+     */
+    public static KernelPorts.GenerativeProvider resolve(ProviderConfig config) {
+        String explicit = config.provider();
+
+        if (!"fake".equals(explicit)) {
+            System.out.println("[GRL] Provider: " + explicit
+                    + (config.model().isEmpty() ? "" : " (" + config.model() + ")"));
+            return create(explicit, config);
+        }
+
+        // Auto-detect from environment
+        for (String name : BUILT_IN.keySet()) {
+            String envVar = name.toUpperCase() + "_API_KEY";
+            String val = System.getenv(envVar);
+            if (val != null && !val.isBlank()) {
+                System.out.println("[GRL] Provider (auto-detected): " + name);
+                return create(name, config.with("provider", name));
+            }
+        }
+
+        System.out.println("[GRL] Provider (fallback): deterministic fake");
+        return new KernelDefaults.DeterministicFakeProvider();
+    }
+
+    /** Return the set of all available provider names. */
+    public static Set<String> available() {
+        Set<String> all = new java.util.TreeSet<>();
+        all.add("fake");
+        all.addAll(BUILT_IN.keySet());
+        all.addAll(CUSTOM.keySet());
+        return all;
+    }
+
+    // ── Reflection loader ───────────────────────────────────────
+
+    /**
+     * Load a provider class by name and invoke its
+     * {@code public static GenerativeProvider create(ProviderConfig)} method.
+     */
+    private static KernelPorts.GenerativeProvider createViaReflection(
+            String className, ProviderConfig config) {
+        try {
+            Class<?> clazz = Class.forName(className);
+            Method method = clazz.getMethod("create", ProviderConfig.class);
+            return (KernelPorts.GenerativeProvider) method.invoke(null, config);
+        } catch (ClassNotFoundException e) {
+            throw new IllegalStateException(
+                    "[GRL] Provider class not found: " + className
+                  + ". Is the dependency on the classpath?", e);
+        } catch (NoSuchMethodException e) {
+            throw new IllegalStateException(
+                    "[GRL] Provider " + className
+                  + " missing: public static GenerativeProvider create(ProviderConfig)", e);
+        } catch (Exception e) {
+            throw new IllegalStateException(
+                    "[GRL] Failed to create provider " + className + ": " + e.getMessage(), e);
+        }
+    }
+}

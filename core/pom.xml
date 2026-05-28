@@ -1,0 +1,41 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0"
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+    <modelVersion>4.0.0</modelVersion>
+
+    <parent>
+        <groupId>grl</groupId>
+        <artifactId>grl-parent</artifactId>
+        <version>0.1.0-SNAPSHOT</version>
+    </parent>
+
+    <artifactId>grl-core</artifactId>
+    <name>GRL Core</name>
+    <description>
+        Generative Resource Layer framework: kernel (semantic model, governance,
+        validation, traceability), generative body layer, provider registry,
+        and platform adapters (ASTRA, Jason).
+    </description>
+
+    <repositories>
+        <repository>
+            <id>mams-cartago</id>
+            <url>https://gitlab.com/api/v4/projects/19479774/packages/maven</url>
+        </repository>
+    </repositories>
+
+    <dependencies>
+        <!--
+          ASTRA — provided scope: compiles the ASTRA adapter but does NOT
+          force ASTRA on consumers who don't need it.
+          ASTRA projects bring their own dependency via astra-cartago-base parent.
+        -->
+        <dependency>
+            <groupId>com.astralanguage</groupId>
+            <artifactId>astra-apis</artifactId>
+            <version>2.0.12</version>
+            <scope>provided</scope>
+        </dependency>
+    </dependencies>
+</project>
