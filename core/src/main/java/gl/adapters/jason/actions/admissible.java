@@ -1,6 +1,6 @@
 package gl.adapters.jason.actions;
 
-import gl.adapters.jason.GLAdapterSingleton;
+import gl.adapters.jason.Adapter;
 import jason.asSemantics.DefaultInternalAction;
 import jason.asSemantics.TransitionSystem;
 import jason.asSemantics.Unifier;
@@ -20,7 +20,7 @@ public class admissible extends DefaultInternalAction {
     public Object execute(TransitionSystem ts, Unifier un, Term[] args) throws Exception {
         checkArguments(args);
         String candidateId = ((StringTerm) args[0]).getString();
-        boolean isAdmissible = GLAdapterSingleton.instance().admissible(candidateId);
+        boolean isAdmissible = Adapter.instance().admissible(candidateId);
         return un.unifies(isAdmissible ? Literal.LTrue : Literal.LFalse, args[1]);
     }
 }

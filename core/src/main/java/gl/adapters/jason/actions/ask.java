@@ -1,6 +1,6 @@
 package gl.adapters.jason.actions;
 
-import gl.adapters.jason.GLAdapterSingleton;
+import gl.adapters.jason.Adapter;
 import jason.asSemantics.DefaultInternalAction;
 import jason.asSemantics.TransitionSystem;
 import jason.asSemantics.Unifier;
@@ -23,7 +23,7 @@ public class ask extends DefaultInternalAction {
         String goalId  = ((StringTerm) args[1]).getString();
         String prompt  = ((StringTerm) args[2]).getString();
 
-        String resultId = GLAdapterSingleton.instance().ask(agentId, goalId, prompt);
+        String resultId = Adapter.instance().ask(agentId, goalId, prompt);
 
         return un.unifies(new StringTermImpl(resultId), args[3]);
     }

@@ -1,33 +1,45 @@
-package gl.adapters.jason;
+package gl.adapters;
 
-import gl.adapters.DirectAdapter;
-import gl.adapters.ResourceActions;
 import gl.provider.ProviderConfig;
 
 /**
- * Thread-safe singleton implementing {@link ResourceActions} for Jason agents.
+ * Shared bridge between platform-specific adapters and the core
+ * {@link DirectAdapter}.
  *
- * <p>Jason Internal Actions (in {@code gl.adapters.jason.actions}) delegate
- * every command to this singleton, which in turn delegates to a
- * {@link DirectAdapter}. This ensures command parity with the ASTRA
- * adapter — same names, same parameter counts, same types.
+ * <p>Manages the {@link ProviderConfig.Builder} lifecycle and
+ * {@link DirectAdapter} instantiation — logic that every platform
+ * adapter (ASTRA, Jason, or any future platform) needs identically.
  *
- * <p>Implements {@code ResourceActions} directly, so the compiler enforces
- * that every command from the contract is available.
+ * <p>Platform adapters hold a {@code PlatformBridge} instance and
+ * delegate all {@link ResourceActions} calls through it, ensuring
+ * identical behaviour regardless of host platform.
+ *
+ * <h3>Architecture</h3>
+ * <pre>
+ *   ResourceActions (interface)        — canonical 14-command contract
+ *       ↑ implements
+ *   AdapterBase (abstract)             — kernel + body wiring
+ *       ↑ extends
+ *   DirectAdapter (concrete)           — in-process adapter
+ *       ↑ held by
+ *   PlatformBridge (this class)        — provider lifecycle, shared state
+ *       ↑ used by
+ *   ├── Adapter  (gl.adapters.astra)
+ *   └── Adapter  (gl.adapters.jason)
+ * </pre>
  */
-public final class GLAdapterSingleton implements ResourceActions {
+public final class PlatformBridge implements ResourceActions {
 
-    private static final GLAdapterSingleton INSTANCE = new GLAdapterSingleton();
-
-    private volatile DirectAdapter adapter = new DirectAdapter();
+    private volatile DirectAdapter adapter;
     private final ProviderConfig.Builder configBuilder = new ProviderConfig.Builder();
+    private final String platformTag;
 
-    private GLAdapterSingleton() {}
+    public PlatformBridge(String platformTag) {
+        this.platformTag = platformTag;
+        this.adapter = new DirectAdapter();
+    }
 
-    /** Get the singleton instance. */
-    public static GLAdapterSingleton instance() { return INSTANCE; }
-
-    // ── ResourceActions implementation ─────────────────────────
+    // ── Provider lifecycle ──────────────────────────────────────
 
     @Override
     public synchronized boolean configure(String key, String value) {
@@ -39,7 +51,7 @@ public final class GLAdapterSingleton implements ResourceActions {
     public synchronized boolean use_provider() {
         ProviderConfig config = configBuilder.build();
         adapter = DirectAdapter.withConfig(config);
-        System.out.println("[GL-Jason] Provider activated: " + config);
+        System.out.println("[GL:" + platformTag + "] Provider activated: " + config);
         return true;
     }
 
@@ -59,6 +71,8 @@ public final class GLAdapterSingleton implements ResourceActions {
     @Override
     public String providers() { return adapter.providers(); }
 
+    // ── Generative body invocation ──────────────────────────────
+
     @Override
     public String invoke(String agentId, String goalId,
                          String bodyId, String affordance,
@@ -70,6 +84,8 @@ public final class GLAdapterSingleton implements ResourceActions {
     public String ask(String agentId, String goalId, String prompt) {
         return adapter.ask(agentId, goalId, prompt);
     }
+
+    // ── Result inspection ──────────────────────────────────────
 
     @Override
     public boolean valid(String resultId) { return adapter.valid(resultId); }
@@ -85,6 +101,8 @@ public final class GLAdapterSingleton implements ResourceActions {
 
     @Override
     public String outcome(String resultId) { return adapter.outcome(resultId); }
+
+    // ── Candidate deliberation ─────────────────────────────────
 
     @Override
     public boolean admissible(String candidateId) { return adapter.admissible(candidateId); }

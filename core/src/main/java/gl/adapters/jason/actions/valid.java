@@ -1,6 +1,6 @@
 package gl.adapters.jason.actions;
 
-import gl.adapters.jason.GLAdapterSingleton;
+import gl.adapters.jason.Adapter;
 import jason.asSemantics.DefaultInternalAction;
 import jason.asSemantics.TransitionSystem;
 import jason.asSemantics.Unifier;
@@ -20,7 +20,7 @@ public class valid extends DefaultInternalAction {
     public Object execute(TransitionSystem ts, Unifier un, Term[] args) throws Exception {
         checkArguments(args);
         String resultId = ((StringTerm) args[0]).getString();
-        boolean isValid = GLAdapterSingleton.instance().valid(resultId);
+        boolean isValid = Adapter.instance().valid(resultId);
         return un.unifies(isValid ? Literal.LTrue : Literal.LFalse, args[1]);
     }
 }

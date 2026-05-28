@@ -1,6 +1,6 @@
 package gl.adapters.jason.actions;
 
-import gl.adapters.jason.GLAdapterSingleton;
+import gl.adapters.jason.Adapter;
 import jason.asSemantics.DefaultInternalAction;
 import jason.asSemantics.TransitionSystem;
 import jason.asSemantics.Unifier;
@@ -20,7 +20,7 @@ public class trace extends DefaultInternalAction {
     public Object execute(TransitionSystem ts, Unifier un, Term[] args) throws Exception {
         checkArguments(args);
         String resultId = ((StringTerm) args[0]).getString();
-        String traceId = GLAdapterSingleton.instance().trace(resultId);
+        String traceId = Adapter.instance().trace(resultId);
         return un.unifies(new StringTermImpl(traceId), args[1]);
     }
 }

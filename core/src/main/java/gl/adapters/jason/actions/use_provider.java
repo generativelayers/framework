@@ -1,6 +1,6 @@
 package gl.adapters.jason.actions;
 
-import gl.adapters.jason.GLAdapterSingleton;
+import gl.adapters.jason.Adapter;
 import jason.asSemantics.DefaultInternalAction;
 import jason.asSemantics.TransitionSystem;
 import jason.asSemantics.Unifier;
@@ -23,9 +23,9 @@ public class use_provider extends DefaultInternalAction {
         String providerName = ((StringTerm) args[0]).getString();
         if (args.length == 2) {
             String model = ((StringTerm) args[1]).getString();
-            return GLAdapterSingleton.instance().use_provider(providerName, model);
+            return Adapter.instance().use_provider(providerName, model);
         } else {
-            return GLAdapterSingleton.instance().use_provider(providerName);
+            return Adapter.instance().use_provider(providerName);
         }
     }
 }

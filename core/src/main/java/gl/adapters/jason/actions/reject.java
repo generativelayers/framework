@@ -1,6 +1,6 @@
 package gl.adapters.jason.actions;
 
-import gl.adapters.jason.GLAdapterSingleton;
+import gl.adapters.jason.Adapter;
 import jason.asSemantics.DefaultInternalAction;
 import jason.asSemantics.TransitionSystem;
 import jason.asSemantics.Unifier;
@@ -20,6 +20,6 @@ public class reject extends DefaultInternalAction {
     public Object execute(TransitionSystem ts, Unifier un, Term[] args) throws Exception {
         checkArguments(args);
         String candidateId = ((StringTerm) args[0]).getString();
-        return GLAdapterSingleton.instance().reject(candidateId);
+        return Adapter.instance().reject(candidateId);
     }
 }

@@ -1,6 +1,6 @@
 package gl.adapters.jason.actions;
 
-import gl.adapters.jason.GLAdapterSingleton;
+import gl.adapters.jason.Adapter;
 import jason.asSemantics.DefaultInternalAction;
 import jason.asSemantics.TransitionSystem;
 import jason.asSemantics.Unifier;
@@ -21,7 +21,7 @@ public class field extends DefaultInternalAction {
         checkArguments(args);
         String resultId  = ((StringTerm) args[0]).getString();
         String fieldName = ((StringTerm) args[1]).getString();
-        String value = GLAdapterSingleton.instance().field(resultId, fieldName);
+        String value = Adapter.instance().field(resultId, fieldName);
         return un.unifies(new StringTermImpl(value), args[2]);
     }
 }

@@ -1,6 +1,6 @@
 package gl.adapters.jason.actions;
 
-import gl.adapters.jason.GLAdapterSingleton;
+import gl.adapters.jason.Adapter;
 import jason.asSemantics.DefaultInternalAction;
 import jason.asSemantics.TransitionSystem;
 import jason.asSemantics.Unifier;
@@ -25,7 +25,7 @@ public class assess extends DefaultInternalAction {
         double confidence  = ((NumberTerm) args[3]).solve();
         String explanation = ((StringTerm) args[4]).getString();
 
-        return GLAdapterSingleton.instance()
+        return Adapter.instance()
                 .assess(assessorId, candidateId, verdict, confidence, explanation);
     }
 }

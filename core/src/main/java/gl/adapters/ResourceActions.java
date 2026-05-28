@@ -3,8 +3,8 @@ package gl.adapters;
 /**
  * Canonical contract for all Generative Layer commands.
  *
- * <p>Both the ASTRA adapter ({@code ResourceModule}) and the Jason adapter
- * ({@code GLAdapterSingleton} + Internal Actions) delegate to this interface.
+ * <p>Both the ASTRA adapter ({@link gl.adapters.astra.Adapter}) and the Jason adapter
+ * ({@link gl.adapters.jason.Adapter} + Internal Actions) delegate to this interface.
  * This guarantees that every command has identical name, parameter count,
  * parameter types, and return type — regardless of the host platform.
  *

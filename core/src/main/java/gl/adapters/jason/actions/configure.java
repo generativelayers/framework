@@ -1,6 +1,6 @@
 package gl.adapters.jason.actions;
 
-import gl.adapters.jason.GLAdapterSingleton;
+import gl.adapters.jason.Adapter;
 import jason.asSemantics.DefaultInternalAction;
 import jason.asSemantics.TransitionSystem;
 import jason.asSemantics.Unifier;
@@ -21,6 +21,6 @@ public class configure extends DefaultInternalAction {
         checkArguments(args);
         String key = ((StringTerm) args[0]).getString();
         String value = ((StringTerm) args[1]).getString();
-        return GLAdapterSingleton.instance().configure(key, value);
+        return Adapter.instance().configure(key, value);
     }
 }

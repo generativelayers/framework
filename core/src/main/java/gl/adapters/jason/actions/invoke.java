@@ -1,6 +1,6 @@
 package gl.adapters.jason.actions;
 
-import gl.adapters.jason.GLAdapterSingleton;
+import gl.adapters.jason.Adapter;
 import jason.asSemantics.DefaultInternalAction;
 import jason.asSemantics.TransitionSystem;
 import jason.asSemantics.Unifier;
@@ -26,7 +26,7 @@ public class invoke extends DefaultInternalAction {
         String prompt     = ((StringTerm) args[4]).getString();
         String required   = ((StringTerm) args[5]).getString();
 
-        String resultId = GLAdapterSingleton.instance()
+        String resultId = Adapter.instance()
                 .invoke(agentId, goalId, bodyId, affordance, prompt, required);
 
         return un.unifies(new StringTermImpl(resultId), args[6]);
