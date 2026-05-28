@@ -6,14 +6,11 @@ import gl.kernel.GovernanceKernelFactory;
 import gl.provider.ProviderConfig;
 import gl.provider.ProviderRegistry;
 
-import java.util.Map;
-
 /**
- * Direct Generative Layer adapter — synchronous, in-process access to the Generative Layer framework.
+ * Direct Generative Layer adapter — synchronous, in-process access.
  *
- * <p>Supports runtime provider reconfiguration via {@link #reconfigure(ProviderConfig)}.
- * When reconfigured, a fresh kernel and body registry are created with the
- * chosen provider, replacing the defaults.
+ * <p>Inherits all {@link ResourceActions} commands from {@link AdapterBase}.
+ * Supports runtime provider reconfiguration via {@link #withConfig(ProviderConfig)}.
  */
 public final class DirectAdapter extends AdapterBase {
 
@@ -29,7 +26,6 @@ public final class DirectAdapter extends AdapterBase {
 
     /**
      * Create a new adapter configured with the given provider config.
-     * This is how the ASTRA Module switches providers at runtime.
      */
     public static DirectAdapter withConfig(ProviderConfig config) {
         var provider = ProviderRegistry.create(config.provider(), config);
@@ -38,13 +34,7 @@ public final class DirectAdapter extends AdapterBase {
         return new DirectAdapter(kernel, bodies);
     }
 
-    public String ask(String agentId, String goalId, String prompt) {
-        return invokeBody(agentId, goalId, "llm.answer", "ANSWER", prompt, "", Map.of());
-    }
-
-    public String invoke(String agentId, String goalId, String bodyId, String affordance, String prompt, String requiredCsv) {
-        return invokeBody(agentId, goalId, bodyId, affordance, prompt, requiredCsv, Map.of());
-    }
+    // ── Legacy method aliases (backward compatibility) ─────────
 
     public boolean validResult(String resultId) { return valid(resultId); }
     public String resultField(String resultId, String fieldName) { return field(resultId, fieldName); }
@@ -54,8 +44,7 @@ public final class DirectAdapter extends AdapterBase {
     public boolean admissibleCandidate(String candidateId) { return admissible(candidateId); }
     public boolean acceptCandidate(String candidateId) { return accept(candidateId); }
     public boolean rejectCandidate(String candidateId) { return reject(candidateId); }
-
     public String assessCandidate(String assessorId, String candidateId, String verdict, double confidence, String criteriaCsv, String evidenceCsv, String explanation) {
-        return assess(assessorId, candidateId, verdict, confidence, criteriaCsv, evidenceCsv, explanation);
+        return assessFull(assessorId, candidateId, verdict, confidence, criteriaCsv, evidenceCsv, explanation);
     }
 }

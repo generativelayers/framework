@@ -16,7 +16,7 @@ import java.util.Objects;
  *   gl.configure("provider", "gemini");
  *   gl.configure("model", "gemini-2.5-flash");
  *   gl.configure("temperature", "0.2");
- *   gl.useProvider();
+ *   gl.use_provider();
  * </pre>
  */
 public final class ProviderConfig {

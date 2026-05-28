@@ -2,23 +2,23 @@ package gl.adapters.astra;
 
 import astra.core.Module;
 import gl.adapters.DirectAdapter;
+import gl.adapters.ResourceActions;
 import gl.provider.ProviderConfig;
 import gl.provider.ProviderRegistry;
-
-import java.util.Set;
 
 /**
  * ASTRA adapter for the Generative Layers framework.
  *
- * <p>Translates between ASTRA's {@code @ACTION}/{@code @TERM} conventions
- * and the platform-agnostic {@link DirectAdapter}.
+ * <p>Thin wrapper that exposes the {@link ResourceActions} contract
+ * as ASTRA {@code @ACTION}/{@code @TERM} methods. Command names,
+ * parameter counts, and types are identical to the Jason adapter.
  *
  * <p>Usage in .astra files:
  * <pre>
  *   module gl.adapters.astra.ResourceModule gl;
  *
  *   rule +!main(list args) {
- *       gl.useProvider("gemini");
+ *       gl.use_provider("gemini");
  *       string resultId = gl.invoke("agent", "goal", "llm.answer",
  *                                     "ANSWER", "prompt", "field1,field2");
  *       boolean isValid = gl.valid(resultId);
@@ -28,113 +28,105 @@ import java.util.Set;
  */
 public class ResourceModule extends Module {
 
-    private DirectAdapter adapter = new DirectAdapter();
+    private ResourceActions actions = new DirectAdapter();
     private ProviderConfig.Builder configBuilder = new ProviderConfig.Builder();
 
     // ── Provider configuration ─────────────────────────────────
 
-    /** Set a configuration key (provider, model, temperature, maxTokens, endpoint, apiKeyEnv). */
     @ACTION
     public boolean configure(String key, String value) {
         configBuilder.set(key, value);
         return true;
     }
 
-    /** Activate the provider with the current configuration. */
     @ACTION
-    public boolean useProvider() {
+    public boolean use_provider() {
         ProviderConfig config = configBuilder.build();
-        adapter = DirectAdapter.withConfig(config);
+        actions = DirectAdapter.withConfig(config);
         System.out.println("[ResourceModule] Provider activated: " + config);
         return true;
     }
 
-    /** Shorthand: activate by provider name (uses defaults for other settings). */
     @ACTION
-    public boolean useProvider(String providerName) {
+    public boolean use_provider(String providerName) {
         configBuilder.set("provider", providerName);
-        return useProvider();
+        return use_provider();
     }
 
-    /** Shorthand: activate by provider name + model. */
     @ACTION
-    public boolean useProvider(String providerName, String model) {
+    public boolean use_provider(String providerName, String model) {
         configBuilder.set("provider", providerName);
         configBuilder.set("model", model);
-        return useProvider();
+        return use_provider();
     }
 
-    /** Return comma-separated list of available provider names. */
     @TERM
     public String providers() {
-        return String.join(",", ProviderRegistry.available());
+        return actions.providers();
     }
 
-    // ── @TERM — return values ──────────────────────────────────
+    // ── Generative body invocation ─────────────────────────────
 
     @TERM
     public String invoke(String agentId, String goalId,
                          String bodyId, String affordance,
                          String prompt, String requiredCsv) {
-        return adapter.invoke(agentId, goalId, bodyId, affordance, prompt, requiredCsv);
+        return actions.invoke(agentId, goalId, bodyId, affordance, prompt, requiredCsv);
     }
 
     @TERM
     public String ask(String agentId, String goalId, String prompt) {
-        return adapter.ask(agentId, goalId, prompt);
+        return actions.ask(agentId, goalId, prompt);
     }
+
+    // ── Result inspection ──────────────────────────────────────
 
     @TERM
     public boolean valid(String resultId) {
-        return adapter.validResult(resultId);
+        return actions.valid(resultId);
     }
 
     @TERM
     public String field(String resultId, String fieldName) {
-        return adapter.resultField(resultId, fieldName);
+        return actions.field(resultId, fieldName);
     }
 
     @TERM
     public String candidate(String resultId) {
-        return adapter.candidateId(resultId);
+        return actions.candidate(resultId);
     }
 
     @TERM
     public String trace(String resultId) {
-        return adapter.traceId(resultId);
+        return actions.trace(resultId);
     }
 
     @TERM
     public String outcome(String resultId) {
-        return adapter.outcomeName(resultId);
+        return actions.outcome(resultId);
     }
+
+    // ── Candidate deliberation ─────────────────────────────────
 
     @TERM
     public boolean admissible(String candidateId) {
-        return adapter.admissibleCandidate(candidateId);
+        return actions.admissible(candidateId);
     }
-
-    // ── @ACTION — side-effects ─────────────────────────────────
 
     @ACTION
     public boolean accept(String candidateId) {
-        return adapter.acceptCandidate(candidateId);
+        return actions.accept(candidateId);
     }
 
     @ACTION
     public boolean reject(String candidateId) {
-        return adapter.rejectCandidate(candidateId);
+        return actions.reject(candidateId);
     }
 
     @ACTION
     public boolean assess(String assessorId, String candidateId,
                           String verdict, double confidence,
                           String explanation) {
-        try {
-            adapter.assessCandidate(assessorId, candidateId, verdict, confidence, "", "", explanation);
-            return true;
-        } catch (Exception e) {
-            return false;
-        }
+        return actions.assess(assessorId, candidateId, verdict, confidence, explanation);
     }
 }

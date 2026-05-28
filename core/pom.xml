@@ -47,6 +47,10 @@
             <id>mams-cartago</id>
             <url>https://gitlab.com/api/v4/projects/19479774/packages/maven</url>
         </repository>
+        <repository>
+            <id>jacamo-mvn-repo</id>
+            <url>https://raw.githubusercontent.com/jacamo-lang/mvn-repo/master</url>
+        </repository>
     </repositories>
 
     <dependencies>
@@ -59,6 +63,17 @@
             <groupId>com.astralanguage</groupId>
             <artifactId>astra-apis</artifactId>
             <version>${astra.version}</version>
+            <scope>provided</scope>
+        </dependency>
+        <!--
+          Jason — provided scope: compiles the Jason adapter but does NOT
+          force Jason on consumers who don't need it.
+          Jason projects bring their own dependency.
+        -->
+        <dependency>
+            <groupId>io.github.jason-lang</groupId>
+            <artifactId>jason-interpreter</artifactId>
+            <version>3.2.0</version>
             <scope>provided</scope>
         </dependency>
         <dependency>

@@ -31,7 +31,7 @@ import java.util.function.Function;
  * <pre>
  *   gl.configure("provider", "gemini");
  *   gl.configure("model", "gemini-2.5-flash");
- *   gl.useProvider();
+ *   gl.use_provider();
  * </pre>
  */
 public final class ProviderRegistry {
