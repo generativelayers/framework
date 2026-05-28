@@ -12,19 +12,19 @@ import java.util.Map;
  * Direct Generative Layer adapter — synchronous, in-process access to the Generative Layer framework.
  *
  * <p>Supports runtime provider reconfiguration via {@link #reconfigure(ProviderConfig)}.
- * When reconfigured, a fresh GovernanceKernel and body registry are created with the
+ * When reconfigured, a fresh kernel and body registry are created with the
  * chosen provider, replacing the defaults.
  */
 public final class DirectAdapter extends AdapterBase {
 
     /** Create with the default (auto-detected) provider. */
     public DirectAdapter() {
-        super(AdapterRuntime.GovernanceKernel(), AdapterRuntime.bodies());
+        super(AdapterRuntime.kernel(), AdapterRuntime.bodies());
     }
 
-    /** Create with an explicit GovernanceKernel and body registry. */
-    public DirectAdapter(GovernanceKernel GovernanceKernel, gl.body.GenerativeBodyRegistry bodies) {
-        super(GovernanceKernel, bodies);
+    /** Create with an explicit kernel and body registry. */
+    public DirectAdapter(GovernanceKernel kernel, gl.body.GenerativeBodyRegistry bodies) {
+        super(kernel, bodies);
     }
 
     /**
@@ -33,9 +33,9 @@ public final class DirectAdapter extends AdapterBase {
      */
     public static DirectAdapter withConfig(ProviderConfig config) {
         var provider = ProviderRegistry.create(config.provider(), config);
-        var GovernanceKernel = GovernanceKernelFactory.withProvider(provider);
-        var bodies = GenerativeBodyRuntime.createStandardRegistry(GovernanceKernel);
-        return new DirectAdapter(GovernanceKernel, bodies);
+        var kernel = GovernanceKernelFactory.withProvider(provider);
+        var bodies = GenerativeBodyRuntime.createStandardRegistry(kernel);
+        return new DirectAdapter(kernel, bodies);
     }
 
     public String ask(String agentId, String goalId, String prompt) {

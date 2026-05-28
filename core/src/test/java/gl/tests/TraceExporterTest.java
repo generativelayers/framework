@@ -9,21 +9,21 @@ import java.util.Map;
 import static org.junit.jupiter.api.Assertions.*;
 
 /**
- * Tests for TraceExporter — verifies that GovernanceKernel state can be exported
+ * Tests for TraceExporter — verifies that kernel state can be exported
  * as structured data for experiment reproducibility.
  */
-final class TraceExporterTest {
+public final class TraceExporterTest {
 
     @Test
     void exportTraceContainsAllFields() {
-        GovernanceKernel GovernanceKernel = GovernanceKernelFactory.deterministicInMemory();
-        ResourceResult result = GovernanceKernel.invoke(new ResourceRequest(
+        GovernanceKernel kernel = GovernanceKernelFactory.deterministicInMemory();
+        ResourceResult result = kernel.invoke(new ResourceRequest(
                 null, "agent_a", "goal_1", "llm.answer", "answer", CandidateType.CANDIDATE_ANSWER,
                 "Return label", ResponseSchema.required("schema", List.of("label")),
                 GovernanceContext.empty(), null, Map.of()
         ));
 
-        TraceRecord trace = GovernanceKernel.trace(result.traceId()).orElseThrow();
+        TraceRecord trace = kernel.trace(result.traceId()).orElseThrow();
         Map<String, Object> exported = TraceExporter.exportTrace(trace);
 
         assertEquals("agent_a", exported.get("agentId"));
@@ -36,15 +36,15 @@ final class TraceExporterTest {
 
     @Test
     void exportCandidateContainsStatusAndFields() {
-        GovernanceKernel GovernanceKernel = GovernanceKernelFactory.deterministicInMemory();
-        ResourceResult result = GovernanceKernel.invoke(new ResourceRequest(
+        GovernanceKernel kernel = GovernanceKernelFactory.deterministicInMemory();
+        ResourceResult result = kernel.invoke(new ResourceRequest(
                 null, "agent_a", "goal_1", "llm.answer", "answer", CandidateType.CANDIDATE_ANSWER,
                 "Return label and confidence",
                 ResponseSchema.required("schema", List.of("label", "confidence")),
                 GovernanceContext.empty(), null, Map.of()
         ));
 
-        Candidate candidate = GovernanceKernel.candidate(result.candidateId()).orElseThrow();
+        Candidate candidate = kernel.candidate(result.candidateId()).orElseThrow();
         Map<String, Object> exported = TraceExporter.exportCandidate(candidate);
 
         assertEquals("VALIDATED", exported.get("status"));
@@ -57,14 +57,14 @@ final class TraceExporterTest {
 
     @Test
     void exportAllReturnsTracesAndMetrics() {
-        GovernanceKernel GovernanceKernel = GovernanceKernelFactory.deterministicInMemory();
-        GovernanceKernel.invoke(new ResourceRequest(
+        GovernanceKernel kernel = GovernanceKernelFactory.deterministicInMemory();
+        kernel.invoke(new ResourceRequest(
                 null, "agent_a", "goal_1", "llm.answer", "answer", CandidateType.CANDIDATE_ANSWER,
                 "Return label", ResponseSchema.required("schema", List.of("label")),
                 GovernanceContext.empty(), null, Map.of()
         ));
 
-        Map<String, Object> snapshot = TraceExporter.exportAll(GovernanceKernel);
+        Map<String, Object> snapshot = TraceExporter.exportAll(kernel);
         assertTrue(snapshot.containsKey("traces"));
         assertTrue(snapshot.containsKey("metrics"));
 
@@ -75,14 +75,14 @@ final class TraceExporterTest {
 
     @Test
     void exportTracesAsCsvHasHeaderAndData() {
-        GovernanceKernel GovernanceKernel = GovernanceKernelFactory.deterministicInMemory();
-        GovernanceKernel.invoke(new ResourceRequest(
+        GovernanceKernel kernel = GovernanceKernelFactory.deterministicInMemory();
+        kernel.invoke(new ResourceRequest(
                 null, "agent_a", "goal_1", "llm.answer", "answer", CandidateType.CANDIDATE_ANSWER,
                 "Return label", ResponseSchema.required("schema", List.of("label")),
                 GovernanceContext.empty(), null, Map.of()
         ));
 
-        List<String> csv = TraceExporter.exportTracesAsCsv(GovernanceKernel.traces());
+        List<String> csv = TraceExporter.exportTracesAsCsv(kernel.traces());
         assertTrue(csv.get(0).startsWith("traceId,"), "First line must be CSV header");
         assertEquals(2, csv.size(), "One header + one data row");
         assertTrue(csv.get(1).contains("agent_a"));

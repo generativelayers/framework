@@ -6,11 +6,11 @@ import java.util.Map;
 import java.util.stream.Collectors;
 
 /**
- * Exports Generative Layer GovernanceKernel state (traces, candidates, assessments, blobs, results)
+ * Exports Generative Layer kernel state (traces, candidates, assessments, blobs, results)
  * as structured Map objects suitable for JSON/CSV serialisation.
  *
  * This utility is essential for experiment reproducibility: it converts the
- * in-memory GovernanceKernel state into portable data that can be written to files,
+ * in-memory kernel state into portable data that can be written to files,
  * compared across ASTRA/Jason runs, and included in paper results.
  *
  * No external JSON library dependency — produces Map/List structures that
@@ -123,15 +123,15 @@ public final class TraceExporter {
     }
 
     /**
-     * Export a full experiment snapshot from the GovernanceKernel: all traces, candidates,
+     * Export a full experiment snapshot from the kernel: all traces, candidates,
      * assessments, results, and metrics.
      */
-    public static Map<String, Object> exportAll(GovernanceKernel GovernanceKernel) {
+    public static Map<String, Object> exportAll(GovernanceKernel kernel) {
         Map<String, Object> snapshot = new LinkedHashMap<>();
-        snapshot.put("traces", GovernanceKernel.traces().stream()
+        snapshot.put("traces", kernel.traces().stream()
                 .map(TraceExporter::exportTrace)
                 .collect(Collectors.toList()));
-        snapshot.put("metrics", GovernanceKernel.metrics());
+        snapshot.put("metrics", kernel.metrics());
         return snapshot;
     }
 

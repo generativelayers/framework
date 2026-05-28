@@ -5,11 +5,11 @@ import gl.kernel.*;
 import java.util.*;
 
 public abstract class AdapterBase {
-    private final GovernanceKernel GovernanceKernel;
+    private final GovernanceKernel kernel;
     private final GenerativeBodyRegistry bodies;
 
-    protected AdapterBase(GovernanceKernel GovernanceKernel, GenerativeBodyRegistry bodies) {
-        this.GovernanceKernel = Objects.requireNonNull(GovernanceKernel);
+    protected AdapterBase(GovernanceKernel kernel, GenerativeBodyRegistry bodies) {
+        this.kernel = Objects.requireNonNull(kernel);
         this.bodies = Objects.requireNonNull(bodies);
     }
 
@@ -19,18 +19,18 @@ public abstract class AdapterBase {
         return result.resourceResult() == null ? "" : result.resourceResult().resultId();
     }
 
-    protected final boolean valid(String resultId) { return GovernanceKernel.valid(resultId); }
-    protected final String field(String resultId, String field) { return GovernanceKernel.field(resultId, field); }
-    protected final String candidate(String resultId) { return GovernanceKernel.result(resultId).map(ResourceResult::candidateId).orElse(""); }
-    protected final String outputBlob(String resultId) { return GovernanceKernel.result(resultId).map(ResourceResult::outputBlobId).orElse(""); }
-    protected final String trace(String resultId) { return GovernanceKernel.result(resultId).map(ResourceResult::traceId).orElse(""); }
-    protected final String outcome(String resultId) { return GovernanceKernel.result(resultId).map(r -> r.outcome().name()).orElse("MISSING_RESULT"); }
-    protected final boolean admissible(String candidateId) { return GovernanceKernel.checkAdmissibility(candidateId).admissible(); }
-    protected final boolean accept(String candidateId) { return GovernanceKernel.acceptCandidate(candidateId).isPresent(); }
-    protected final boolean reject(String candidateId) { return GovernanceKernel.rejectCandidate(candidateId).isPresent(); }
+    protected final boolean valid(String resultId) { return kernel.valid(resultId); }
+    protected final String field(String resultId, String field) { return kernel.field(resultId, field); }
+    protected final String candidate(String resultId) { return kernel.result(resultId).map(ResourceResult::candidateId).orElse(""); }
+    protected final String outputBlob(String resultId) { return kernel.result(resultId).map(ResourceResult::outputBlobId).orElse(""); }
+    protected final String trace(String resultId) { return kernel.result(resultId).map(ResourceResult::traceId).orElse(""); }
+    protected final String outcome(String resultId) { return kernel.result(resultId).map(r -> r.outcome().name()).orElse("MISSING_RESULT"); }
+    protected final boolean admissible(String candidateId) { return kernel.checkAdmissibility(candidateId).admissible(); }
+    protected final boolean accept(String candidateId) { return kernel.acceptCandidate(candidateId).isPresent(); }
+    protected final boolean reject(String candidateId) { return kernel.rejectCandidate(candidateId).isPresent(); }
 
     protected final String assess(String assessorId, String candidateId, String verdict, double confidence, String criteriaCsv, String evidenceCsv, String explanation) {
-        return GovernanceKernel.assess(assessorId, candidateId, "candidate", parseVerdict(verdict), confidence, csv(criteriaCsv), csv(evidenceCsv), explanation).assessmentId();
+        return kernel.assess(assessorId, candidateId, "candidate", parseVerdict(verdict), confidence, csv(criteriaCsv), csv(evidenceCsv), explanation).assessmentId();
     }
 
     protected static List<String> csv(String value) {

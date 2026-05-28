@@ -8,7 +8,7 @@ import gl.provider.ProviderRegistry;
 import java.util.Set;
 
 /**
- * ASTRA adapter for the Generative Resource gl.
+ * ASTRA adapter for the Generative Layers framework.
  *
  * <p>Translates between ASTRA's {@code @ACTION}/{@code @TERM} conventions
  * and the platform-agnostic {@link DirectAdapter}.
@@ -22,7 +22,7 @@ import java.util.Set;
  *       string resultId = gl.invoke("agent", "goal", "llm.answer",
  *                                     "ANSWER", "prompt", "field1,field2");
  *       boolean isValid = gl.valid(resultId);
- *       if (isValid) { gl.accept(layer.candidate(resultId)); }
+ *       if (isValid) { gl.accept(gl.candidate(resultId)); }
  *   }
  * </pre>
  */

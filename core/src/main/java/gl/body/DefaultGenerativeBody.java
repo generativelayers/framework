@@ -6,11 +6,11 @@ import java.util.Map;
 import java.util.Objects;
 
 public final class DefaultGenerativeBody implements GenerativeBody {
-    private final GovernanceKernel GovernanceKernel;
+    private final GovernanceKernel kernel;
     private final BodyDescriptor descriptor;
 
-    public DefaultGenerativeBody(GovernanceKernel GovernanceKernel, BodyDescriptor descriptor) {
-        this.GovernanceKernel = Objects.requireNonNull(GovernanceKernel);
+    public DefaultGenerativeBody(GovernanceKernel kernel, BodyDescriptor descriptor) {
+        this.kernel = Objects.requireNonNull(kernel);
         this.descriptor = Objects.requireNonNull(descriptor);
     }
 
@@ -25,7 +25,7 @@ public final class DefaultGenerativeBody implements GenerativeBody {
         ResourceRequest request = new ResourceRequest(null, invocation.agentId(), invocation.goalId(), descriptor.bodyId(),
                 invocation.affordance().name().toLowerCase(), type, invocation.prompt(), schema,
                 GovernanceContext.empty(), null, invocation.parameters());
-        ResourceResult result = GovernanceKernel.invoke(request);
+        ResourceResult result = kernel.invoke(request);
         return new InvocationResult(descriptor.bodyId(), statusFor(result.outcome()), result,
                 result.candidateId(), result.outputBlobId(), result.traceId(), result.message(), Instant.now());
     }

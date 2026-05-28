@@ -6,6 +6,6 @@ import gl.kernel.GovernanceKernel;
 
 public final class AdapterRuntime {
     private AdapterRuntime() {}
-    public static GovernanceKernel GovernanceKernel() { return GenerativeBodyRuntime.GovernanceKernel(); }
+    public static GovernanceKernel kernel() { return GenerativeBodyRuntime.kernel(); }
     public static GenerativeBodyRegistry bodies() { return GenerativeBodyRuntime.registry(); }
 }
