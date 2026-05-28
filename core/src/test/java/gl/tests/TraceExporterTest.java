@@ -1,6 +1,6 @@
 package gl.tests;
 
-import gl.GovernanceKernel.*;
+import gl.kernel.*;
 import org.junit.jupiter.api.Test;
 
 import java.util.List;

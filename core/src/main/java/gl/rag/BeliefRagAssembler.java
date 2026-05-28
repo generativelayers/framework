@@ -1,6 +1,6 @@
 package gl.rag;
 
-import gl.GovernanceKernel.BeliefSnapshot;
+import gl.kernel.BeliefSnapshot;
 import java.util.List;
 
 public final class BeliefRagAssembler {

@@ -1,6 +1,6 @@
 package gl.body;
 
-import gl.GovernanceKernel.*;
+import gl.kernel.*;
 import java.time.Instant;
 import java.util.Map;
 import java.util.Objects;

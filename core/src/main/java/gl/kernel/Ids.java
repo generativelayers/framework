@@ -1,4 +1,4 @@
-package gl.GovernanceKernel;
+package gl.kernel;
 
 import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;

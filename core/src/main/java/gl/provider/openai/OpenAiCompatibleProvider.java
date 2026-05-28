@@ -1,9 +1,9 @@
 package gl.provider.openai;
 
-import gl.GovernanceKernel.Blob;
-import gl.GovernanceKernel.KernelPorts;
-import gl.GovernanceKernel.ProviderOutput;
-import gl.GovernanceKernel.ResourceRequest;
+import gl.kernel.Blob;
+import gl.kernel.KernelPorts;
+import gl.kernel.ProviderOutput;
+import gl.kernel.ResourceRequest;
 import gl.provider.ProviderConfig;
 
 import java.io.IOException;

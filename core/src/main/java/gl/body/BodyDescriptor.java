@@ -1,6 +1,6 @@
 package gl.body;
 
-import gl.GovernanceKernel.CandidateType;
+import gl.kernel.CandidateType;
 import java.util.List;
 import java.util.Map;
 

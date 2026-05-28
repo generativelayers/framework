@@ -1,6 +1,6 @@
 package gl.body;
 
-import gl.GovernanceKernel.ResourceResult;
+import gl.kernel.ResourceResult;
 import java.time.Instant;
 
 public record InvocationResult(String bodyId, InvocationStatus status, ResourceResult resourceResult,

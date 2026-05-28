@@ -1,8 +1,8 @@
 package gl.body;
 
-import gl.GovernanceKernel.CandidateType;
-import gl.GovernanceKernel.GovernanceKernel;
-import gl.GovernanceKernel.GovernanceKernelFactory;
+import gl.kernel.CandidateType;
+import gl.kernel.GovernanceKernel;
+import gl.kernel.GovernanceKernelFactory;
 import gl.provider.ProviderConfig;
 import gl.provider.ProviderRegistry;
 import java.util.List;

@@ -1,7 +1,7 @@
 package gl.provider;
 
-import gl.GovernanceKernel.KernelDefaults;
-import gl.GovernanceKernel.KernelPorts;
+import gl.kernel.KernelDefaults;
+import gl.kernel.KernelPorts;
 
 import java.lang.reflect.Method;
 import java.util.Map;
@@ -45,8 +45,8 @@ public final class ProviderRegistry {
     // ── Built-in provider class names (resolved via reflection) ─
 
     private static final Map<String, String> BUILT_IN = Map.of(
-            "gemini", "layer.provider.gemini.GeminiProvider",
-            "openai", "layer.provider.openai.OpenAiCompatibleProvider"
+            "gemini", "gl.provider.gemini.GeminiProvider",
+            "openai", "gl.provider.openai.OpenAiCompatibleProvider"
     );
 
     /**
@@ -92,7 +92,7 @@ public final class ProviderRegistry {
         }
 
         throw new IllegalArgumentException(
-                "[Layer] Unknown provider: '" + name + "'. "
+                "[GL] Unknown provider: '" + name + "'. "
               + "Available: " + available());
     }
 
@@ -106,7 +106,7 @@ public final class ProviderRegistry {
         String explicit = config.provider();
 
         if (!"fake".equals(explicit)) {
-            System.out.println("[Layer] Provider: " + explicit
+            System.out.println("[GL] Provider: " + explicit
                     + (config.model().isEmpty() ? "" : " (" + config.model() + ")"));
             return create(explicit, config);
         }
@@ -116,12 +116,12 @@ public final class ProviderRegistry {
             String envVar = name.toUpperCase() + "_API_KEY";
             String val = System.getenv(envVar);
             if (val != null && !val.isBlank()) {
-                System.out.println("[Layer] Provider (auto-detected): " + name);
+                System.out.println("[GL] Provider (auto-detected): " + name);
                 return create(name, config.with("provider", name));
             }
         }
 
-        System.out.println("[Layer] Provider (fallback): deterministic fake");
+        System.out.println("[GL] Provider (fallback): deterministic fake");
         return new KernelDefaults.DeterministicFakeProvider();
     }
 
@@ -148,15 +148,15 @@ public final class ProviderRegistry {
             return (KernelPorts.GenerativeProvider) method.invoke(null, config);
         } catch (ClassNotFoundException e) {
             throw new IllegalStateException(
-                    "[Layer] Provider class not found: " + className
+                    "[GL] Provider class not found: " + className
                   + ". Is the dependency on the classpath?", e);
         } catch (NoSuchMethodException e) {
             throw new IllegalStateException(
-                    "[Layer] Provider " + className
+                    "[GL] Provider " + className
                   + " missing: public static GenerativeProvider create(ProviderConfig)", e);
         } catch (Exception e) {
             throw new IllegalStateException(
-                    "[Layer] Failed to create provider " + className + ": " + e.getMessage(), e);
+                    "[GL] Failed to create provider " + className + ": " + e.getMessage(), e);
         }
     }
 }

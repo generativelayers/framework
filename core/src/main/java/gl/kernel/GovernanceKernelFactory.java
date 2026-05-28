@@ -1,4 +1,4 @@
-package gl.GovernanceKernel;
+package gl.kernel;
 
 /**
  * Factory for {@link GovernanceKernel} instances.

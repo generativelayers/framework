@@ -1,7 +1,7 @@
 package gl.tests;
 
 import gl.body.*;
-import gl.GovernanceKernel.*;
+import gl.kernel.*;
 import java.util.List;
 import java.util.Map;
 

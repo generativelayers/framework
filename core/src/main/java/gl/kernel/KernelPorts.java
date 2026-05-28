@@ -1,4 +1,4 @@
-package gl.GovernanceKernel;
+package gl.kernel;
 
 import java.util.List;
 import java.util.Optional;

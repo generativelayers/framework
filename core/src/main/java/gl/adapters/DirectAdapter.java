@@ -1,8 +1,8 @@
 package gl.adapters;
 
 import gl.body.GenerativeBodyRuntime;
-import gl.GovernanceKernel.GovernanceKernel;
-import gl.GovernanceKernel.GovernanceKernelFactory;
+import gl.kernel.GovernanceKernel;
+import gl.kernel.GovernanceKernelFactory;
 import gl.provider.ProviderConfig;
 import gl.provider.ProviderRegistry;
 

@@ -1,4 +1,4 @@
-package gl.GovernanceKernel;
+package gl.kernel;
 
 import java.util.ArrayList;
 import java.util.List;

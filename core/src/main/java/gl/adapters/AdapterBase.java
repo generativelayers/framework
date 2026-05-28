@@ -1,7 +1,7 @@
 package gl.adapters;
 
 import gl.body.*;
-import gl.GovernanceKernel.*;
+import gl.kernel.*;
 import java.util.*;
 
 public abstract class AdapterBase {

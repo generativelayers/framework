@@ -1,4 +1,4 @@
-package gl.GovernanceKernel;
+package gl.kernel;
 
 public final class Outcomes {
     private Outcomes() {}
