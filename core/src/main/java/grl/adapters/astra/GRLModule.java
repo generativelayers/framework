@@ -15,7 +15,7 @@ import java.util.Set;
  *
  * <p>Usage in .astra files:
  * <pre>
- *   module grl.adapters.astra.Module grl;
+ *   module grl.adapters.astra.GRLModule grl;
  *
  *   rule +!main(list args) {
  *       grl.useProvider("gemini");
@@ -26,7 +26,7 @@ import java.util.Set;
  *   }
  * </pre>
  */
-public class Module extends Module {
+public class GRLModule extends Module {
 
     private DirectAdapter adapter = new DirectAdapter();
     private ProviderConfig.Builder configBuilder = new ProviderConfig.Builder();
@@ -45,7 +45,7 @@ public class Module extends Module {
     public boolean useProvider() {
         ProviderConfig config = configBuilder.build();
         adapter = DirectAdapter.withConfig(config);
-        System.out.println("[Module] Provider activated: " + config);
+        System.out.println("[GRLModule] Provider activated: " + config);
         return true;
     }
 
