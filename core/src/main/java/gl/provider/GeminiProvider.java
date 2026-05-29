@@ -80,9 +80,10 @@ public final class GeminiProvider implements KernelPorts.GenerativeProvider {
 
         String systemInstruction =
                 "You are a structured data extraction tool for a BDI agent system. "
-              + "Return your answer as key=value lines, one per line. "
-              + "Do NOT use JSON. Do NOT add explanations. "
-              + "Example format:\\nlabel=fruit\\nconfidence=0.95";
+              + "You MUST respond strictly in valid JSON format. "
+              + "Do NOT include any conversational introduction, explanation, or markdown formatting (do not wrap in ```json). "
+              + "Output ONLY the raw JSON string. "
+              + "Example JSON format:\\n{\\n  \"label\": \"fruit\",\\n  \"confidence\": 0.95\\n}";
 
         String body = buildRequestBody(systemInstruction, request.prompt());
 

@@ -101,15 +101,17 @@ public final class ChatCompletionsProvider implements KernelPorts.GenerativeProv
                   + "Set via: gl.configure(\"model\", \"model-name\");");
         }
 
+        String systemInstruction =
+                "You are a structured data extraction tool for a BDI agent system. "
+              + "You MUST respond strictly in valid JSON format. "
+              + "Do NOT include any conversational introduction, explanation, or markdown formatting (do not wrap in ```json). "
+              + "Output ONLY the raw JSON string. "
+              + "Example JSON format:\n{\n  \"label\": \"fruit\",\n  \"confidence\": 0.95\n}";
+
         String body = "{\"model\":\"" + ProviderUtils.escape(model)
                 + "\",\"messages\":["
-                + "{\"role\":\"system\",\"content\":\""
-                + "You are a structured data extraction tool for a BDI agent system. "
-                + "Return your answer as key=value lines, one per line. "
-                + "Do NOT use JSON. Do NOT add explanations. "
-                + "Example format:\\nlabel=fruit\\nconfidence=0.95\"}"
-                + ",{\"role\":\"user\",\"content\":\""
-                + ProviderUtils.escape(request.prompt()) + "\"}"
+                + "{\"role\":\"system\",\"content\":\"" + ProviderUtils.escape(systemInstruction) + "\"}"
+                + ",{\"role\":\"user\",\"content\":\"" + ProviderUtils.escape(request.prompt()) + "\"}"
                 + "],\"temperature\":" + temperature + "}";
 
         HttpRequest httpRequest = HttpRequest.newBuilder(endpoint)

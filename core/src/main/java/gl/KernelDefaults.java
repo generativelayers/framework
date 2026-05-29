@@ -50,7 +50,67 @@ public final class KernelDefaults {
         private Map<String, String> parse(String raw) {
             Map<String, String> fields = new LinkedHashMap<>();
             if (raw == null || raw.isBlank()) return fields;
-            for (String line : raw.split("\\R")) {
+
+            String clean = raw.trim();
+            // Strip markdown code fences if present (e.g. ```json ... ```)
+            if (clean.startsWith("```")) {
+                clean = clean.replaceAll("^```[a-zA-Z]*\\s*", "")
+                             .replaceAll("```\\s*$", "")
+                             .trim();
+            }
+
+            // Try parsing as structured JSON using a zero-dependency flat JSON parser
+            if (clean.startsWith("{") && clean.endsWith("}")) {
+                try {
+                    String inner = clean.substring(1, clean.length() - 1).trim();
+                    StringBuilder key = new StringBuilder();
+                    StringBuilder val = new StringBuilder();
+                    boolean inQuote = false;
+                    boolean isKey = true;
+                    boolean escaped = false;
+
+                    for (int i = 0; i < inner.length(); i++) {
+                        char c = inner.charAt(i);
+                        if (escaped) {
+                            if (isKey) key.append(c); else val.append(c);
+                            escaped = false;
+                        } else if (c == '\\') {
+                            escaped = true;
+                        } else if (c == '"') {
+                            inQuote = !inQuote;
+                        } else if (c == ':' && !inQuote) {
+                            isKey = false;
+                        } else if (c == ',' && !inQuote) {
+                            String k = key.toString().trim();
+                            String v = val.toString().trim();
+                            if (!k.isEmpty()) {
+                                fields.put(k, v);
+                            }
+                            key.setLength(0);
+                            val.setLength(0);
+                            isKey = true;
+                        } else {
+                            if (isKey) {
+                                key.append(c);
+                            } else {
+                                val.append(c);
+                            }
+                        }
+                    }
+                    String k = key.toString().trim();
+                    String v = val.toString().trim();
+                    if (!k.isEmpty()) {
+                        fields.put(k, v);
+                    }
+                    return fields;
+                } catch (Exception e) {
+                    System.err.println("[GL] Zero-dependency JSON parsing failed, falling back to key=value parser: " + e.getMessage());
+                    fields.clear();
+                }
+            }
+
+            // Fallback: Parse as traditional key=value lines
+            for (String line : clean.split("\\R")) {
                 int idx = line.indexOf('=');
                 if (idx <= 0) continue;
                 String key = line.substring(0, idx).trim();
