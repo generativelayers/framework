@@ -165,7 +165,7 @@ ResourceResult result = kernel.invoke(new ResourceRequest(
 
 ```xml
 <dependency>
-    <groupId>io.github.generativelayers</groupId>
+    <groupId>com.generativelayers</groupId>
     <artifactId>generative-layers-core</artifactId>
     <version>0.1.0</version>
 </dependency>
