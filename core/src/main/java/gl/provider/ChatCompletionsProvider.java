@@ -1,0 +1,140 @@
+package gl.provider;
+
+import gl.model.Blob;
+import gl.KernelPorts;
+import gl.model.ProviderOutput;
+import gl.model.ResourceRequest;
+
+import java.io.IOException;
+import java.net.URI;
+import java.net.http.HttpClient;
+import java.net.http.HttpRequest;
+import java.net.http.HttpResponse;
+import java.time.Duration;
+import java.util.Map;
+
+/**
+ * Universal provider for any service implementing the Chat Completions API.
+ *
+ * <p>This REST API format — originally defined by OpenAI — is now an industry
+ * standard adopted by Groq, Cerebras, DeepSeek, Together AI, Fireworks,
+ * Ollama, LM Studio, and many others. This single class handles them all.
+ *
+ * <h3>Usage — Known provider (alias):</h3>
+ * <pre>
+ *   gl.configure("model", "llama-3.3-70b-versatile");
+ *   gl.use_provider("groq");
+ * </pre>
+ *
+ * <h3>Usage — Any custom provider (no framework changes needed):</h3>
+ * <pre>
+ *   gl.configure("endpoint", "https://api.any-provider.com/v1/chat/completions");
+ *   gl.configure("model", "any-model");
+ *   gl.configure("apiKeyEnv", "ANY_API_KEY");
+ *   gl.use_provider("chatcompletions");
+ * </pre>
+ *
+ * <h3>Known aliases (convenience shortcuts):</h3>
+ * <table>
+ *   <tr><th>Name</th><th>Endpoint</th><th>Default key env var</th></tr>
+ *   <tr><td>openai</td><td>api.openai.com</td><td>OPENAI_API_KEY</td></tr>
+ *   <tr><td>groq</td><td>api.groq.com</td><td>GROQ_API_KEY</td></tr>
+ *   <tr><td>cerebras</td><td>api.cerebras.ai</td><td>CEREBRAS_API_KEY</td></tr>
+ *   <tr><td>deepseek</td><td>api.deepseek.com</td><td>DEEPSEEK_API_KEY</td></tr>
+ * </table>
+ */
+public final class ChatCompletionsProvider implements KernelPorts.GenerativeProvider {
+
+    // ── Known provider aliases → default endpoints ──────────────
+    // Adding a new provider here is optional — users can always
+    // supply a custom endpoint via gl.configure("endpoint", "...").
+
+    private static final Map<String, String> KNOWN_ENDPOINTS = Map.of(
+            "openai",   "https://api.openai.com/v1/chat/completions",
+            "groq",     "https://api.groq.com/openai/v1/chat/completions",
+            "cerebras", "https://api.cerebras.ai/v1/chat/completions",
+            "deepseek", "https://api.deepseek.com/chat/completions"
+    );
+
+    private final HttpClient client;
+    private final URI endpoint;
+    private final String apiKey;
+    private final String model;
+    private final String providerName;
+    private final double temperature;
+
+    public ChatCompletionsProvider(ProviderConfig config) {
+        this.client = HttpClient.newBuilder().connectTimeout(Duration.ofSeconds(20)).build();
+        this.model = config.model();
+        this.temperature = config.temperature();
+        this.apiKey = config.apiKey();
+        this.providerName = config.provider().isEmpty() ? "chatcompletions" : config.provider();
+
+        // Resolve endpoint: user-configured > known alias > error
+        String ep = config.endpoint();
+        if (ep.isEmpty()) {
+            ep = KNOWN_ENDPOINTS.getOrDefault(providerName, "");
+        }
+        if (ep.isEmpty()) {
+            throw new IllegalStateException(
+                    "[GL] No endpoint configured for provider '" + providerName + "'. "
+                  + "Either use a known name (" + KNOWN_ENDPOINTS.keySet() + ") "
+                  + "or set a custom endpoint: gl.configure(\"endpoint\", \"https://...\");");
+        }
+        this.endpoint = URI.create(ep);
+    }
+
+    // ── GenerativeProvider implementation ────────────────────────
+
+    @Override
+    public ProviderOutput generate(ResourceRequest request, Blob promptBlob)
+            throws IOException, InterruptedException {
+        if (apiKey == null || apiKey.isBlank()) {
+            throw new IllegalStateException(
+                    "[GL] API key not set for " + providerName + ". "
+                  + "Set via: gl.configure(\"apiKeyEnv\", \"YOUR_KEY_ENV_VAR\"); "
+                  + "or export " + providerName.toUpperCase() + "_API_KEY");
+        }
+        if (model == null || model.isBlank()) {
+            throw new IllegalStateException(
+                    "[GL] No model specified. "
+                  + "Set via: gl.configure(\"model\", \"model-name\");");
+        }
+
+        String body = "{\"model\":\"" + ProviderUtils.escape(model)
+                + "\",\"messages\":["
+                + "{\"role\":\"system\",\"content\":\""
+                + "You are a structured data extraction tool for a BDI agent system. "
+                + "Return your answer as key=value lines, one per line. "
+                + "Do NOT use JSON. Do NOT add explanations. "
+                + "Example format:\\nlabel=fruit\\nconfidence=0.95\"}"
+                + ",{\"role\":\"user\",\"content\":\""
+                + ProviderUtils.escape(request.prompt()) + "\"}"
+                + "],\"temperature\":" + temperature + "}";
+
+        HttpRequest httpRequest = HttpRequest.newBuilder(endpoint)
+                .timeout(Duration.ofSeconds(60))
+                .header("Authorization", "Bearer " + apiKey)
+                .header("Content-Type", "application/json")
+                .POST(HttpRequest.BodyPublishers.ofString(body))
+                .build();
+
+        HttpResponse<String> response = client.send(httpRequest,
+                HttpResponse.BodyHandlers.ofString());
+
+        if (response.statusCode() < 200 || response.statusCode() >= 300) {
+            throw new IOException("provider HTTP " + response.statusCode()
+                    + ": " + response.body());
+        }
+
+        String text = ProviderUtils.extractJsonString(response.body(), "\"content\":");
+        return new ProviderOutput(providerName, model,
+                text != null ? text : response.body(),
+                Map.of("status", Integer.toString(response.statusCode())));
+    }
+
+    /** Factory method — called by {@link ProviderRegistry} via reflection. */
+    public static KernelPorts.GenerativeProvider create(ProviderConfig config) {
+        return new ChatCompletionsProvider(config);
+    }
+}

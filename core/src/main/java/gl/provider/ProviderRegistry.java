@@ -41,12 +41,20 @@ public final class ProviderRegistry {
 
     private static final Map<String, Function<ProviderConfig, KernelPorts.GenerativeProvider>>
             CUSTOM = new ConcurrentHashMap<>();
-
     // ── Built-in provider class names (resolved via reflection) ─
+    // All Chat Completions API providers share one class.
+    // Known aliases are defined inside ChatCompletionsProvider.KNOWN_ENDPOINTS.
+    // Users can add any provider via gl.configure("endpoint", "...").
+
+    private static final String CHAT_COMPLETIONS = "gl.provider.ChatCompletionsProvider";
 
     private static final Map<String, String> BUILT_IN = Map.of(
-            "gemini", "gl.provider.GeminiProvider",
-            "openai", "gl.provider.OpenAiProvider"
+            "gemini",           "gl.provider.GeminiProvider",
+            "openai",           CHAT_COMPLETIONS,
+            "groq",             CHAT_COMPLETIONS,
+            "cerebras",         CHAT_COMPLETIONS,
+            "deepseek",         CHAT_COMPLETIONS,
+            "chatcompletions",  CHAT_COMPLETIONS
     );
 
     /**
@@ -91,9 +99,16 @@ public final class ProviderRegistry {
             return createViaReflection(className, config);
         }
 
+        // 4. Unknown name — fall back to ChatCompletionsProvider if user set an endpoint
+        if (!config.endpoint().isEmpty()) {
+            System.out.println("[GL] Using custom endpoint for '" + name + "'");
+            return createViaReflection(CHAT_COMPLETIONS, config);
+        }
+
         throw new IllegalArgumentException(
                 "[GL] Unknown provider: '" + name + "'. "
-              + "Available: " + available());
+              + "Available: " + available() + ". "
+              + "Or set a custom endpoint: gl.configure(\"endpoint\", \"https://...\");");
     }
 
     /**

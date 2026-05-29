@@ -1,14 +1,27 @@
 name: Publish to Maven Central
 
 on:
-  push:
-    tags:
-      - 'v*'  # Triggers on tags like v0.1.0, v0.2.0, etc.
+  workflow_dispatch:
+    inputs:
+      version:
+        description: 'Version to publish (e.g. 0.1.1)'
+        required: true
+        type: string
+      confirm:
+        description: 'Type PUBLISH to confirm deployment to Maven Central'
+        required: true
+        type: string
 
 jobs:
   publish:
     runs-on: ubuntu-latest
     steps:
+      - name: Confirm deployment
+        if: ${{ github.event.inputs.confirm != 'PUBLISH' }}
+        run: |
+          echo "❌ Deployment cancelled. You must type 'PUBLISH' to confirm."
+          exit 1
+
       - uses: actions/checkout@v4
 
       - name: Set up JDK 17
