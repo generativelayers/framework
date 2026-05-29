@@ -4,15 +4,15 @@
          xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
     <modelVersion>4.0.0</modelVersion>
 
-    <groupId>gl</groupId>
-    <artifactId>core</artifactId>
-    <version>0.1.0-SNAPSHOT</version>
+    <groupId>io.github.generativelayers</groupId>
+    <artifactId>generative-layers-core</artifactId>
+    <version>0.1.0</version>
     <packaging>jar</packaging>
 
     <name>Generative Layers Core</name>
     <description>
-        Generative Resource Layer framework for BDI agents: kernel (semantic model,
-        governance, validation, traceability), generative body layer, provider registry,
+        Generative Resource Layer framework for BDI agents: governance kernel,
+        generative body affordance model, provider registry (Gemini, OpenAI),
         and platform adapters (ASTRA, Jason, JaCaMo).
     </description>
     <url>https://www.generativelayers.com</url>
@@ -25,6 +25,13 @@
         </license>
     </licenses>
 
+    <developers>
+        <developer>
+            <name>Dimitrios Kyriakou</name>
+            <url>https://github.com/generativelayers</url>
+        </developer>
+    </developers>
+
     <organization>
         <name>Generative Layers</name>
         <url>https://github.com/generativelayers</url>
@@ -35,6 +42,17 @@
         <connection>scm:git:git://github.com/generativelayers/framework.git</connection>
         <developerConnection>scm:git:git@github.com:generativelayers/framework.git</developerConnection>
     </scm>
+
+    <distributionManagement>
+        <snapshotRepository>
+            <id>ossrh</id>
+            <url>https://s01.oss.sonatype.org/content/repositories/snapshots</url>
+        </snapshotRepository>
+        <repository>
+            <id>ossrh</id>
+            <url>https://s01.oss.sonatype.org/service/local/staging/deploy/maven2/</url>
+        </repository>
+    </distributionManagement>
 
     <properties>
         <maven.compiler.release>17</maven.compiler.release>
@@ -53,7 +71,7 @@
         <!--
           ASTRA — provided scope: compiles the ASTRA adapter but does NOT
           force ASTRA on consumers who don't need it.
-          ASTRA projects bring their own dependency via astra-cartago-base parent.
+          Available on Maven Central (com.astralanguage).
         -->
         <dependency>
             <groupId>com.astralanguage</groupId>
@@ -64,7 +82,7 @@
         <!--
           Jason — provided scope: compiles the Jason adapter but does NOT
           force Jason on consumers who don't need it.
-          Jason projects bring their own dependency.
+          Available on Maven Central (io.github.jason-lang).
         -->
         <dependency>
             <groupId>io.github.jason-lang</groupId>
@@ -75,7 +93,7 @@
         <!--
           CArtAgO — provided scope: compiles the JaCaMo adapter but does NOT
           force CArtAgO on consumers who don't need it.
-          JaCaMo projects bring their own dependency.
+          NOT on Maven Central — requires jacamo-mvn-repo above.
         -->
         <dependency>
             <groupId>org.jacamo</groupId>
@@ -95,11 +113,6 @@
         <plugins>
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
-                <artifactId>maven-surefire-plugin</artifactId>
-                <version>3.5.2</version>
-            </plugin>
-            <plugin>
-                <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-compiler-plugin</artifactId>
                 <version>3.13.0</version>
                 <configuration>
@@ -108,9 +121,15 @@
             </plugin>
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-surefire-plugin</artifactId>
+                <version>3.5.2</version>
+            </plugin>
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-jar-plugin</artifactId>
                 <version>3.4.1</version>
             </plugin>
+            <!-- Source JAR (required by Maven Central) -->
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-source-plugin</artifactId>
@@ -122,6 +141,7 @@
                     </execution>
                 </executions>
             </plugin>
+            <!-- Javadoc JAR (required by Maven Central) -->
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-javadoc-plugin</artifactId>
@@ -136,6 +156,29 @@
                         <goals><goal>jar</goal></goals>
                     </execution>
                 </executions>
+            </plugin>
+            <!-- GPG signing (required by Maven Central) -->
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-gpg-plugin</artifactId>
+                <version>3.2.7</version>
+                <executions>
+                    <execution>
+                        <id>sign-artifacts</id>
+                        <phase>verify</phase>
+                        <goals><goal>sign</goal></goals>
+                    </execution>
+                </executions>
+            </plugin>
+            <!-- Sonatype Central deployment -->
+            <plugin>
+                <groupId>org.sonatype.central</groupId>
+                <artifactId>central-publishing-maven-plugin</artifactId>
+                <version>0.7.0</version>
+                <extensions>true</extensions>
+                <configuration>
+                    <publishingServerId>central</publishingServerId>
+                </configuration>
             </plugin>
         </plugins>
     </build>
