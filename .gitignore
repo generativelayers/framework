@@ -12,3 +12,6 @@ target/
 # OS
 .DS_Store
 Thumbs.db
+
+# Maven flatten plugin
+.flattened-pom.xml
