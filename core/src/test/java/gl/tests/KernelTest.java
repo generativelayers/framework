@@ -1,7 +1,8 @@
 package gl.tests;
 
+import gl.*;
+import gl.model.*;
 import gl.body.*;
-import gl.kernel.*;
 import org.junit.jupiter.api.Test;
 
 import java.util.List;
@@ -50,9 +51,7 @@ public final class KernelTest {
         GovernanceKernel kernel = GovernanceKernelFactory.deterministicInMemory();
         ResourceResult result = kernel.invoke(new ResourceRequest(
                 null, "agent_a", "goal_1", "llm.answer", "answer", CandidateType.CANDIDATE_ANSWER,
-                "blocked", ResponseSchema.required("schema", List.of("label")), GovernanceContext.empty(), null,
-                Map.of("deny", "true")
-        ));
+                "blocked", ResponseSchema.required("schema", List.of("label")), GovernanceContext.empty(), Map.of("deny", "true"), ""));
 
         assertEquals(Outcomes.ResultOutcome.GOVERNANCE_DENIED, result.outcome());
         assertTrue(result.candidateId().isBlank(), "Denied request must not create a candidate");
@@ -64,9 +63,7 @@ public final class KernelTest {
         GovernanceKernel kernel = GovernanceKernelFactory.deterministicInMemory();
         ResourceResult result = kernel.invoke(new ResourceRequest(
                 null, "agent_a", "goal_1", "llm.answer", "answer", CandidateType.CANDIDATE_ANSWER,
-                "escalated", ResponseSchema.required("schema", List.of("label")), GovernanceContext.empty(), null,
-                Map.of("escalate", "true")
-        ));
+                "escalated", ResponseSchema.required("schema", List.of("label")), GovernanceContext.empty(), Map.of("escalate", "true"), ""));
 
         assertEquals(Outcomes.ResultOutcome.GOVERNANCE_ESCALATED, result.outcome());
         assertTrue(result.candidateId().isBlank(), "Escalated request must not create a candidate");
@@ -79,9 +76,7 @@ public final class KernelTest {
         GovernanceKernel kernel = GovernanceKernelFactory.deterministicInMemory();
         ResourceResult result = kernel.invoke(new ResourceRequest(
                 null, "agent_a", "goal_1", "llm.answer", "answer", CandidateType.CANDIDATE_ANSWER,
-                "bad", ResponseSchema.required("schema", List.of("missing")), GovernanceContext.empty(), null,
-                Map.of("mode", "missing_field")
-        ));
+                "bad", ResponseSchema.required("schema", List.of("missing")), GovernanceContext.empty(), Map.of("mode", "missing_field"), ""));
 
         assertEquals(Outcomes.ResultOutcome.INVALID_OUTPUT, result.outcome());
         Candidate candidate = kernel.candidate(result.candidateId()).orElseThrow();
@@ -95,8 +90,7 @@ public final class KernelTest {
                 null, "agent_a", "goal_1", "llm.answer", "answer", CandidateType.CANDIDATE_ANSWER,
                 "Return label and confidence",
                 ResponseSchema.required("schema", List.of("label", "confidence")),
-                GovernanceContext.empty(), null, Map.of()
-        ));
+                GovernanceContext.empty(), Map.of(), ""));
 
         assertTrue(result.success());
         assertEquals("test", kernel.field(result.resultId(), "label"));
@@ -112,9 +106,7 @@ public final class KernelTest {
         GovernanceKernel kernel = GovernanceKernelFactory.deterministicInMemory();
         ResourceResult result = kernel.invoke(new ResourceRequest(
                 null, "agent_a", "goal_1", "llm.answer", "answer", CandidateType.CANDIDATE_ANSWER,
-                "fail", ResponseSchema.required("schema", List.of("label")), GovernanceContext.empty(), null,
-                Map.of("mode", "fail")
-        ));
+                "fail", ResponseSchema.required("schema", List.of("label")), GovernanceContext.empty(), Map.of("mode", "fail"), ""));
 
         assertEquals(Outcomes.ResultOutcome.PROVIDER_FAILED, result.outcome());
         assertFalse(result.success());
@@ -128,9 +120,7 @@ public final class KernelTest {
         GovernanceKernel kernel = GovernanceKernelFactory.deterministicInMemory();
         ResourceResult result = kernel.invoke(new ResourceRequest(
                 null, "agent_a", "goal_1", "llm.answer", "answer", CandidateType.CANDIDATE_ANSWER,
-                "Return label and confidence", ResponseSchema.required("schema", List.of("label", "confidence")), GovernanceContext.empty(), null,
-                Map.of()
-        ));
+                "Return label and confidence", ResponseSchema.required("schema", List.of("label", "confidence")), GovernanceContext.empty(), Map.of(), ""));
         String candidateId = result.candidateId();
         kernel.assess("agent_b", candidateId, "candidate", Outcomes.AssessmentVerdict.ACCEPT, 0.9, List.of("schema"), List.of(result.outputBlobId()), "acceptable");
         assertEquals(CandidateStatus.ASSESSED, kernel.candidate(candidateId).orElseThrow().status());
@@ -143,8 +133,7 @@ public final class KernelTest {
                 null, "agent_a", "goal_1", "llm.answer", "answer", CandidateType.CANDIDATE_ANSWER,
                 "Return label and confidence",
                 ResponseSchema.required("schema", List.of("label", "confidence")),
-                GovernanceContext.empty(), null, Map.of()
-        ));
+                GovernanceContext.empty(), Map.of(), ""));
         String candidateId = result.candidateId();
 
         Assessment a1 = kernel.assess("agent_b", candidateId, "candidate",
@@ -166,8 +155,7 @@ public final class KernelTest {
                 null, "agent_a", "goal_1", "llm.answer", "answer", CandidateType.CANDIDATE_ANSWER,
                 "Return label and confidence",
                 ResponseSchema.required("schema", List.of("label", "confidence")),
-                GovernanceContext.empty(), null, Map.of()
-        ));
+                GovernanceContext.empty(), Map.of(), ""));
 
         Candidate accepted = kernel.acceptCandidate(result.candidateId()).orElseThrow();
         assertEquals(CandidateStatus.ACCEPTED_BY_AGENT, accepted.status(),
@@ -181,8 +169,7 @@ public final class KernelTest {
                 null, "agent_a", "goal_1", "llm.answer", "answer", CandidateType.CANDIDATE_ANSWER,
                 "Return label and confidence",
                 ResponseSchema.required("schema", List.of("label", "confidence")),
-                GovernanceContext.empty(), null, Map.of()
-        ));
+                GovernanceContext.empty(), Map.of(), ""));
 
         Candidate rejected = kernel.rejectCandidate(result.candidateId()).orElseThrow();
         assertEquals(CandidateStatus.REJECTED_BY_AGENT, rejected.status(),
@@ -197,9 +184,7 @@ public final class KernelTest {
         // Create an INVALID candidate via missing field
         ResourceResult result = kernel.invoke(new ResourceRequest(
                 null, "agent_a", "goal_1", "llm.answer", "answer", CandidateType.CANDIDATE_ANSWER,
-                "bad", ResponseSchema.required("schema", List.of("missing")), GovernanceContext.empty(), null,
-                Map.of("mode", "missing_field")
-        ));
+                "bad", ResponseSchema.required("schema", List.of("missing")), GovernanceContext.empty(), Map.of("mode", "missing_field"), ""));
 
         AdmissibilityDecision decision = kernel.checkAdmissibility(result.candidateId());
         assertFalse(decision.admissible(),
@@ -214,8 +199,7 @@ public final class KernelTest {
                 null, "agent_a", "goal_1", "llm.answer", "answer", CandidateType.CANDIDATE_ANSWER,
                 "Return label and confidence",
                 ResponseSchema.required("schema", List.of("label", "confidence")),
-                GovernanceContext.empty(), null, Map.of()
-        ));
+                GovernanceContext.empty(), Map.of(), ""));
         String candidateId = result.candidateId();
 
         // Initially admissible (validated)
@@ -238,8 +222,7 @@ public final class KernelTest {
         ResourceResult result = kernel.invoke(new ResourceRequest(
                 null, "agent_a", "goal_1", "llm.answer", "answer", CandidateType.CANDIDATE_ANSWER,
                 "Return label", ResponseSchema.required("schema", List.of("label")),
-                GovernanceContext.empty(), null, Map.of()
-        ));
+                GovernanceContext.empty(), Map.of(), ""));
 
         assertFalse(result.traceId().isBlank(), "Every invocation must produce a trace");
         TraceRecord trace = kernel.trace(result.traceId()).orElseThrow();
@@ -257,7 +240,7 @@ public final class KernelTest {
                 null, "agent_a", "goal_1", "llm.answer", "answer", CandidateType.CANDIDATE_ANSWER,
                 "Return label",
                 ResponseSchema.required("schema", List.of("label")),
-                GovernanceContext.empty(), null, Map.of()
+                GovernanceContext.empty(), Map.of(), ""
         ));
 
         assertFalse(result.promptBlobId().isBlank());
@@ -282,14 +265,14 @@ public final class KernelTest {
         kernel.invoke(new ResourceRequest(
                 null, "agent_a", "goal_1", "llm.answer", "answer", CandidateType.CANDIDATE_ANSWER,
                 "Return label", ResponseSchema.required("schema", List.of("label")),
-                GovernanceContext.empty(), null, Map.of()
+                GovernanceContext.empty(), Map.of(), ""
         ));
 
         // One denied invocation
         kernel.invoke(new ResourceRequest(
                 null, "agent_a", "goal_1", "llm.answer", "answer", CandidateType.CANDIDATE_ANSWER,
                 "blocked", ResponseSchema.required("schema", List.of("label")),
-                GovernanceContext.empty(), null, Map.of("deny", "true")
+                GovernanceContext.empty(), Map.of("deny", "true"), ""
         ));
 
         List<String> metrics = kernel.metrics();

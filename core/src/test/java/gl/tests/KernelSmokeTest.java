@@ -1,7 +1,8 @@
 package gl.tests;
 
+import gl.*;
+import gl.model.*;
 import gl.body.*;
-import gl.kernel.*;
 import java.util.List;
 import java.util.Map;
 

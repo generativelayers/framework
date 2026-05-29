@@ -97,6 +97,8 @@ public final class ProviderConfig {
             return this;
         }
 
+        public boolean has(String key) { return values.containsKey(key); }
+
         public ProviderConfig build() { return new ProviderConfig(values); }
     }
 }

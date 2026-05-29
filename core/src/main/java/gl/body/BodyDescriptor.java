@@ -1,9 +1,11 @@
 package gl.body;
 
-import gl.kernel.CandidateType;
+import gl.model.CandidateType;
 import java.util.List;
 import java.util.Map;
 
+/** Descriptor for a generative body instance: its ID, human-readable name,
+ *  kind (LLM/TOOL/HYBRID), supported affordances, and default candidate type. */
 public record BodyDescriptor(
         String bodyId,
         BodyKind kind,

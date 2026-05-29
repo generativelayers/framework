@@ -1,10 +1,14 @@
 package gl.body;
 
-import gl.kernel.*;
+import gl.*;
+import gl.model.*;
 import java.time.Instant;
 import java.util.Map;
 import java.util.Objects;
 
+/** Default {@link GenerativeBody} implementation.
+ *  Maps a {@link BodyAffordance} to a {@link CandidateType}, builds a
+ *  {@link ResourceRequest}, and delegates to {@link GovernanceKernel#invoke}. */
 public final class DefaultGenerativeBody implements GenerativeBody {
     private final GovernanceKernel kernel;
     private final BodyDescriptor descriptor;
@@ -22,9 +26,21 @@ public final class DefaultGenerativeBody implements GenerativeBody {
         ResponseSchema schema = invocation.requiredFields().isEmpty()
                 ? ResponseSchema.freeText()
                 : ResponseSchema.required(invocation.affordance().name().toLowerCase() + "_schema", invocation.requiredFields());
+
+        // Belief-RAG: prepend agent beliefs to the prompt if provided
+        String prompt = invocation.prompt();
+        if (!invocation.beliefContext().isEmpty()) {
+            StringBuilder sb = new StringBuilder("Agent beliefs:\n");
+            for (String belief : invocation.beliefContext()) {
+                sb.append("- ").append(belief).append('\n');
+            }
+            sb.append("\nInstruction:\n").append(prompt);
+            prompt = sb.toString();
+        }
+
         ResourceRequest request = new ResourceRequest(null, invocation.agentId(), invocation.goalId(), descriptor.bodyId(),
-                invocation.affordance().name().toLowerCase(), type, invocation.prompt(), schema,
-                GovernanceContext.empty(), null, invocation.parameters());
+                invocation.affordance().name().toLowerCase(), type, prompt, schema,
+                GovernanceContext.empty(), invocation.parameters(), invocation.conversationId());
         ResourceResult result = kernel.invoke(request);
         return new InvocationResult(descriptor.bodyId(), statusFor(result.outcome()), result,
                 result.candidateId(), result.outputBlobId(), result.traceId(), result.message(), Instant.now());

@@ -1,21 +1,51 @@
 package gl.body;
 
-import gl.kernel.CandidateType;
-import gl.kernel.GovernanceKernel;
-import gl.kernel.GovernanceKernelFactory;
+import gl.model.CandidateType;
+import gl.GovernanceKernel;
+import gl.GovernanceKernelFactory;
 import gl.provider.ProviderConfig;
 import gl.provider.ProviderRegistry;
 import java.util.List;
 import java.util.Map;
 
+/**
+ * Runtime wiring: creates {@link DefaultGenerativeBody} instances from a
+ * {@link GovernanceKernel} and registers them in the {@link GenerativeBodyRegistry}.
+ *
+ * <p>Uses lazy initialization — the kernel and registry are created on first access,
+ * not at class-load time. This avoids premature provider auto-detection.
+ */
 public final class GenerativeBodyRuntime {
-    private static final GovernanceKernel KERNEL = GovernanceKernelFactory.withProvider(ProviderRegistry.resolve(ProviderConfig.empty()));
-    private static final GenerativeBodyRegistry REGISTRY = createStandardRegistry(KERNEL);
+
+    private static volatile GovernanceKernel lazyKernel;
+    private static volatile GenerativeBodyRegistry lazyRegistry;
 
     private GenerativeBodyRuntime() {}
 
-    public static GovernanceKernel kernel() { return KERNEL; }
-    public static GenerativeBodyRegistry registry() { return REGISTRY; }
+    /** Get the shared kernel, creating it lazily on first access. */
+    public static GovernanceKernel kernel() {
+        if (lazyKernel == null) {
+            synchronized (GenerativeBodyRuntime.class) {
+                if (lazyKernel == null) {
+                    lazyKernel = GovernanceKernelFactory.withProvider(
+                            ProviderRegistry.resolve(ProviderConfig.empty()));
+                }
+            }
+        }
+        return lazyKernel;
+    }
+
+    /** Get the shared registry, creating it lazily on first access. */
+    public static GenerativeBodyRegistry registry() {
+        if (lazyRegistry == null) {
+            synchronized (GenerativeBodyRuntime.class) {
+                if (lazyRegistry == null) {
+                    lazyRegistry = createStandardRegistry(kernel());
+                }
+            }
+        }
+        return lazyRegistry;
+    }
 
     public static GenerativeBodyRegistry createStandardRegistry(GovernanceKernel kernel) {
         GenerativeBodyRegistry registry = new GenerativeBodyRegistry();

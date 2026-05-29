@@ -1,7 +1,7 @@
 package gl.provider;
 
-import gl.kernel.KernelDefaults;
-import gl.kernel.KernelPorts;
+import gl.KernelDefaults;
+import gl.KernelPorts;
 
 import java.lang.reflect.Method;
 import java.util.Map;
@@ -45,8 +45,8 @@ public final class ProviderRegistry {
     // ── Built-in provider class names (resolved via reflection) ─
 
     private static final Map<String, String> BUILT_IN = Map.of(
-            "gemini", "gl.provider.gemini.GeminiProvider",
-            "openai", "gl.provider.openai.OpenAiCompatibleProvider"
+            "gemini", "gl.provider.GeminiProvider",
+            "openai", "gl.provider.OpenAiProvider"
     );
 
     /**

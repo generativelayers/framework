@@ -4,6 +4,8 @@ import java.util.List;
 import java.util.Optional;
 import java.util.concurrent.ConcurrentHashMap;
 
+/** Registry mapping body IDs to {@link GenerativeBody} instances.
+ *  Agents may have multiple bodies (e.g. one for answering, one for tool calls). */
 public final class GenerativeBodyRegistry {
     private final ConcurrentHashMap<String, GenerativeBody> bodies = new ConcurrentHashMap<>();
 
