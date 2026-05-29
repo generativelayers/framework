@@ -1,0 +1,53 @@
+name: Publish to Maven Central
+
+on:
+  push:
+    tags:
+      - 'v*'  # Triggers on tags like v0.1.0, v0.2.0, etc.
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up JDK 17
+        uses: actions/setup-java@v4
+        with:
+          java-version: '17'
+          distribution: 'temurin'
+
+      - name: Import GPG key
+        run: echo "${{ secrets.GPG_PRIVATE_KEY }}" | gpg --batch --import
+        env:
+          GPG_PRIVATE_KEY: ${{ secrets.GPG_PRIVATE_KEY }}
+
+      - name: Configure Maven settings
+        run: |
+          mkdir -p ~/.m2
+          cat > ~/.m2/settings.xml << 'EOF'
+          <settings>
+            <servers>
+              <server>
+                <id>central</id>
+                <username>${{ secrets.CENTRAL_USERNAME }}</username>
+                <password>${{ secrets.CENTRAL_PASSWORD }}</password>
+              </server>
+            </servers>
+            <profiles>
+              <profile>
+                <id>gpg</id>
+                <properties>
+                  <gpg.keyname>${{ secrets.GPG_KEY_ID }}</gpg.keyname>
+                </properties>
+              </profile>
+            </profiles>
+            <activeProfiles>
+              <activeProfile>gpg</activeProfile>
+            </activeProfiles>
+          </settings>
+          EOF
+
+      - name: Build and Deploy
+        working-directory: core
+        run: mvn clean deploy -Dgpg.passphrase=""
