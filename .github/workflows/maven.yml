@@ -10,6 +10,10 @@ jobs:
   build:
     runs-on: ubuntu-latest
 
+    defaults:
+      run:
+        working-directory: core
+
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
@@ -20,6 +24,7 @@ jobs:
           distribution: temurin
           java-version: '17'
           cache: maven
+          cache-dependency-path: core/pom.xml
 
-      - name: Build with Maven
+      - name: Build and test core
         run: mvn test
