@@ -1,5 +1,10 @@
 # Generative Layers (GL) — Core Framework
 
+[![Maven Central](https://img.shields.io/maven-central/v/com.generativelayers/generative-layers-core?color=blue&label=Maven%20Central)](https://central.sonatype.com/artifact/com.generativelayers/generative-layers-core)
+[![Build](https://img.shields.io/badge/Tests-65%20passed-brightgreen)]()
+[![Java](https://img.shields.io/badge/Java-17%2B-orange)]()
+[![License](https://img.shields.io/badge/License-Apache%202.0-green.svg)](https://www.apache.org/licenses/LICENSE-2.0)
+
 A governance middleware for BDI agents that use Large Language Models.
 
 ## Architecture
