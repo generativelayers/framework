@@ -161,6 +161,16 @@ ResourceResult result = kernel.invoke(new ResourceRequest(
     GovernanceContext.empty(), Map.of(), "conversation-1"));
 ```
 
+## Maven Dependency
+
+```xml
+<dependency>
+    <groupId>io.github.generativelayers</groupId>
+    <artifactId>generative-layers-core</artifactId>
+    <version>0.1.0</version>
+</dependency>
+```
+
 ## Building
 
 ```bash
@@ -168,8 +178,11 @@ ResourceResult result = kernel.invoke(new ResourceRequest(
 cd framework/core
 mvn test        # 65 tests
 
+# Package (JAR + sources + javadoc)
+mvn package -Dgpg.skip=true
+
 # Install to local Maven repository
-mvn install -DskipTests
+mvn install -Dgpg.skip=true
 
 # Build an ASTRA example
 cd examples/astra/single-agent-candidate
