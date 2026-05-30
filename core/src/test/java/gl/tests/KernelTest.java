@@ -280,4 +280,21 @@ public final class KernelTest {
         assertTrue(metrics.stream().anyMatch(m -> m.contains("gl.invoke.success")), "Must track successful invocations");
         assertTrue(metrics.stream().anyMatch(m -> m.contains("gl.invoke.denied")), "Must track denied invocations");
     }
+
+    @Test
+    void dynamicSchemaValidation() {
+        GovernanceKernel kernel = GovernanceKernelFactory.deterministicInMemory();
+
+        // 1. Test validation with custom schema [step1, step2]
+        ResourceResult result = kernel.invoke(new ResourceRequest(
+                null, "agent_a", "goal_1", "llm.answer", "answer", CandidateType.CANDIDATE_ANSWER,
+                "Return steps",
+                ResponseSchema.required("steps_schema", List.of("step1", "step2")),
+                GovernanceContext.empty(), Map.of("mode", "plan"), ""
+        ));
+
+        assertTrue(result.success());
+        assertEquals("retrieve_context", kernel.field(result.resultId(), "step1"));
+        assertEquals("validate_candidate", kernel.field(result.resultId(), "step2"));
+    }
 }

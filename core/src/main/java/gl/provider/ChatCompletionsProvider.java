@@ -11,6 +11,7 @@ import java.net.http.HttpClient;
 import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
 import java.time.Duration;
+import java.util.List;
 import java.util.Map;
 
 /**
@@ -101,17 +102,35 @@ public final class ChatCompletionsProvider implements KernelPorts.GenerativeProv
                   + "Set via: gl.configure(\"model\", \"model-name\");");
         }
 
+        List<String> required = request.schema() != null ? request.schema().requiredFields() : List.of();
+        String jsonSchema;
+        if (required.isEmpty()) {
+            jsonSchema = "{ \"answer\": null }";
+        } else {
+            StringBuilder sb = new StringBuilder("{ ");
+            for (int i = 0; i < required.size(); i++) {
+                sb.append("\"").append(required.get(i)).append("\": null");
+                if (i < required.size() - 1) {
+                    sb.append(", ");
+                }
+            }
+            sb.append(" }");
+            jsonSchema = sb.toString();
+        }
+
         String systemInstruction =
                 "You are a structured data extraction tool for a BDI agent system. "
               + "You MUST respond strictly in valid JSON format. "
               + "Do NOT include any conversational introduction, explanation, or markdown formatting (do not wrap in ```json). "
               + "Output ONLY the raw JSON string. "
-              + "Example JSON format:\n{\n  \"label\": \"fruit\",\n  \"confidence\": 0.95\n}";
+              + "Always keep the exact same keys as the JSON schema.\n\n"
+              + "JSON schema: " + jsonSchema;
 
+        String userPrompt = "Input: " + request.prompt() + "\nJSON Response:";
         String body = "{\"model\":\"" + ProviderUtils.escape(model)
                 + "\",\"messages\":["
                 + "{\"role\":\"system\",\"content\":\"" + ProviderUtils.escape(systemInstruction) + "\"}"
-                + ",{\"role\":\"user\",\"content\":\"" + ProviderUtils.escape(request.prompt()) + "\"}"
+                + ",{\"role\":\"user\",\"content\":\"" + ProviderUtils.escape(userPrompt) + "\"}"
                 + "],\"temperature\":" + temperature + "}";
 
         HttpRequest httpRequest = HttpRequest.newBuilder(endpoint)

@@ -144,7 +144,34 @@ public final class DirectAdapter implements ResourceActions {
     public String field(String resultId, String fieldName) {
         return kernel.result(resultId)
                 .flatMap(r -> kernel.candidate(r.candidateId()))
-                .map(c -> c.fields().getOrDefault(fieldName, ""))
+                .map(c -> {
+                    // 1. Try exact lookup
+                    String val = c.fields().get(fieldName);
+                    if (val != null && !val.isEmpty()) return val;
+
+                    // 2. Try case-insensitive lookup
+                    for (java.util.Map.Entry<String, String> entry : c.fields().entrySet()) {
+                        if (entry.getKey().equalsIgnoreCase(fieldName)) {
+                            return entry.getValue();
+                        }
+                    }
+
+                    // 3. Alias fallback: if looking for label/category/value, fall back to "answer"
+                    if ("label".equalsIgnoreCase(fieldName) || "category".equalsIgnoreCase(fieldName) || "value".equalsIgnoreCase(fieldName)) {
+                        String ans = c.fields().get("answer");
+                        if (ans == null) {
+                            for (java.util.Map.Entry<String, String> entry : c.fields().entrySet()) {
+                                if (entry.getKey().equalsIgnoreCase("answer")) {
+                                    ans = entry.getValue();
+                                    break;
+                                }
+                            }
+                        }
+                        if (ans != null) return ans;
+                    }
+
+                    return "";
+                })
                 .orElse("");
     }
 

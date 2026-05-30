@@ -10,6 +10,7 @@ import java.net.http.HttpClient;
 import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
 import java.time.Duration;
+import java.util.List;
 import java.util.Map;
 
 /**
@@ -78,14 +79,32 @@ public final class GeminiProvider implements KernelPorts.GenerativeProvider {
                     "GEMINI_API_KEY is not set. Export it: export GEMINI_API_KEY=\"your-key\"");
         }
 
+        List<String> required = request.schema() != null ? request.schema().requiredFields() : List.of();
+        String jsonSchema;
+        if (required.isEmpty()) {
+            jsonSchema = "{ \"answer\": null }";
+        } else {
+            StringBuilder sb = new StringBuilder("{ ");
+            for (int i = 0; i < required.size(); i++) {
+                sb.append("\"").append(required.get(i)).append("\": null");
+                if (i < required.size() - 1) {
+                    sb.append(", ");
+                }
+            }
+            sb.append(" }");
+            jsonSchema = sb.toString();
+        }
+
         String systemInstruction =
                 "You are a structured data extraction tool for a BDI agent system. "
               + "You MUST respond strictly in valid JSON format. "
               + "Do NOT include any conversational introduction, explanation, or markdown formatting (do not wrap in ```json). "
               + "Output ONLY the raw JSON string. "
-              + "Example JSON format:\\n{\\n  \"label\": \"fruit\",\\n  \"confidence\": 0.95\\n}";
+              + "Always keep the exact same keys as the JSON schema.\n\n"
+              + "JSON schema: " + jsonSchema;
 
-        String body = buildRequestBody(systemInstruction, request.prompt());
+        String userPrompt = "Input: " + request.prompt() + "\nJSON Response:";
+        String body = buildRequestBody(systemInstruction, userPrompt);
 
         URI url = baseUrl.resolve(
                 "/v1beta/models/" + model + ":generateContent");
