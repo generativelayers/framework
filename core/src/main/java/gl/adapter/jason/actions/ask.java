@@ -14,7 +14,7 @@ import jason.asSyntax.*;
 public class ask extends DefaultInternalAction {
 
     @Override public int getMinArgs() { return 4; }
-    @Override public int getMaxArgs() { return 4; }
+    @Override public int getMaxArgs() { return 5; }
 
     @Override
     public Object execute(TransitionSystem ts, Unifier un, Term[] args) throws Exception {
@@ -23,8 +23,14 @@ public class ask extends DefaultInternalAction {
         String goalId  = ((StringTerm) args[1]).getString();
         String prompt  = ((StringTerm) args[2]).getString();
 
-        String resultId = JasonAdapter.instance().ask(agentId, goalId, prompt);
-
-        return un.unifies(new StringTermImpl(resultId), args[3]);
+        String resultId;
+        if (args.length == 5) {
+            String conversationId = ((StringTerm) args[3]).getString();
+            resultId = JasonAdapter.instance().ask(agentId, goalId, prompt, conversationId);
+            return un.unifies(new StringTermImpl(resultId), args[4]);
+        } else {
+            resultId = JasonAdapter.instance().ask(agentId, goalId, prompt);
+            return un.unifies(new StringTermImpl(resultId), args[3]);
+        }
     }
 }

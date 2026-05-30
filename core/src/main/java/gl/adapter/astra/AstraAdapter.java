@@ -50,6 +50,10 @@ public class AstraAdapter extends Module {
     @TERM public String ask(String agentId, String goalId, String prompt) {
         return SHARED.ask(agentId, goalId, prompt);
     }
+    @TERM public String ask(String agentId, String goalId, String prompt, String conversationId) {
+        return SHARED.ask(agentId, goalId, prompt, conversationId);
+    }
+
 
     // ── Result inspection ──────────────────────────────────────
 

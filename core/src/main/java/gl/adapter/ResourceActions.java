@@ -68,6 +68,10 @@ public interface ResourceActions {
     /** Shorthand: invoke llm.answer with ANSWER affordance. Returns the result ID. */
     String ask(String agentId, String goalId, String prompt);
 
+    /** Shorthand: invoke llm.answer with ANSWER affordance and a conversation context. Returns the result ID. */
+    String ask(String agentId, String goalId, String prompt, String conversationId);
+
+
     // ── Result inspection ──────────────────────────────────────
 
     /** Check whether a result passed schema validation. */

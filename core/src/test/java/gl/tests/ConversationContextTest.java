@@ -2,6 +2,9 @@ package gl.tests;
 
 import gl.*;
 import gl.model.*;
+import gl.body.GenerativeBodyRuntime;
+import gl.adapter.DirectAdapter;
+
 
 import java.util.List;
 import java.util.Map;
@@ -91,5 +94,18 @@ class ConversationContextTest {
 
         // No conversation should be created for empty ID
         assertEquals(0, kernel.conversation("").size()); // fresh empty context
+    }
+
+    @Test
+    void adapterExposesStatefulAsk() {
+        GovernanceKernel kernel = GovernanceKernelFactory.deterministicInMemory();
+        var registry = GenerativeBodyRuntime.createStandardRegistry(kernel);
+        var adapter = new DirectAdapter(kernel, registry);
+
+        adapter.ask("agent1", "goal1", "Q1", "conv-adapter-test");
+        adapter.ask("agent1", "goal1", "Q2", "conv-adapter-test");
+
+        var conversation = kernel.conversation("conv-adapter-test");
+        assertEquals(4, conversation.size()); // 2 turns * (user + assistant) = 4
     }
 }

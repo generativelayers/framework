@@ -128,8 +128,20 @@ public final class DirectAdapter implements ResourceActions {
 
     @Override
     public String ask(String agentId, String goalId, String prompt) {
-        return invoke(agentId, goalId, "llm.answer", "ANSWER", prompt, "");
+        return ask(agentId, goalId, prompt, "");
     }
+
+    @Override
+    public String ask(String agentId, String goalId, String prompt, String conversationId) {
+        BodyInvocation invocation = new BodyInvocation(
+                agentId, goalId, "llm.answer", BodyAffordance.ANSWER,
+                prompt, List.of(), Map.of(), List.of(), conversationId
+        );
+        GenerativeBody body = bodies.require("llm.answer");
+        InvocationResult result = body.invoke(invocation);
+        return result.resourceResult() != null ? result.resourceResult().resultId() : "";
+    }
+
 
     // ── Result inspection ──────────────────────────────────────
 
