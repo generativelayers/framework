@@ -72,7 +72,15 @@ public final class KernelDefaults {
                     for (int i = 0; i < inner.length(); i++) {
                         char c = inner.charAt(i);
                         if (escaped) {
-                            if (isKey) key.append(c); else val.append(c);
+                            char decoded = switch (c) {
+                                case 'n' -> '\n';
+                                case 'r' -> '\r';
+                                case 't' -> '\t';
+                                case 'b' -> '\b';
+                                case 'f' -> '\f';
+                                default -> c;
+                            };
+                            if (isKey) key.append(decoded); else val.append(decoded);
                             escaped = false;
                         } else if (c == '\\') {
                             escaped = true;
