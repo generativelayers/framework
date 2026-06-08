@@ -8,7 +8,7 @@ import gl.adapter.DirectAdapter;
  *
  * <p>Extends {@link cartago.Artifact} and delegates all GL commands to
  * {@link DirectAdapter} — the same pattern used by
- * {@link gl.adapter.AstraAdapter} (ASTRA module) and
+ * {@link gl.adapter.astra.AstraAdapter} (ASTRA module) and
  * {@link gl.adapter.jason.JasonAdapter} (Jason internal actions).
  *
  * <p>All three adapters implement the same 16 commands from

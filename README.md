@@ -13,7 +13,7 @@ A governance middleware for BDI agents that use Large Language Models. Every LLM
 <dependency>
     <groupId>com.generativelayers</groupId>
     <artifactId>generative-layers-core</artifactId>
-    <version>0.1.1</version>
+    <version>0.1.2</version>
 </dependency>
 ```
 
@@ -62,8 +62,9 @@ mvn compile astra:deploy
     .print("Adopted: ", Label).
 ```
 
-## What's New in v0.1.1
+## What's New in v0.1.2
 
+- **Short public aliases** — `module gl.astra.GL gl;` for ASTRA, `makeArtifact("gl", "gl.jacamo.GL", [], Id);` for JaCaMo
 - **Structured JSON outputs** — dynamic schema-driven generation for Gemini and ChatCompletions providers
 - **Stateful conversation memory** — multi-turn dialogue via optional `conversationId` in `ask`
 - **5 built-in providers** — Cerebras, Groq, Gemini, OpenAI, DeepSeek

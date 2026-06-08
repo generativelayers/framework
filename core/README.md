@@ -1,7 +1,7 @@
 # Generative Layers (GL) — Core Framework
 
 [![Maven Central](https://img.shields.io/maven-central/v/com.generativelayers/generative-layers-core?color=blue&label=Maven%20Central)](https://central.sonatype.com/artifact/com.generativelayers/generative-layers-core)
-[![Build](https://img.shields.io/badge/Tests-65%20passed-brightgreen)]()
+[![Build](https://img.shields.io/badge/Tests-67%20passed-brightgreen)]()
 [![Java](https://img.shields.io/badge/Java-17%2B-orange)]()
 [![License](https://img.shields.io/badge/License-Apache%202.0-green.svg)](https://www.apache.org/licenses/LICENSE-2.0)
 
@@ -123,7 +123,7 @@ gl/                          9 files  — Governance engine (the core)
 ### ASTRA
 ```astra
 agent MyAgent {
-    module gl.adapter.AstraAdapter gl;
+    module gl.astra.GL gl;
 
     rule +!main(list args) {
         gl.use_provider("gemini");
@@ -172,7 +172,7 @@ ResourceResult result = kernel.invoke(new ResourceRequest(
 <dependency>
     <groupId>com.generativelayers</groupId>
     <artifactId>generative-layers-core</artifactId>
-    <version>0.1.0</version>
+    <version>0.1.2</version>
 </dependency>
 ```
 
@@ -181,7 +181,7 @@ ResourceResult result = kernel.invoke(new ResourceRequest(
 ```bash
 # Build and test the framework
 cd framework/core
-mvn test        # 65 tests
+mvn test        # 67 tests
 
 # Package (JAR + sources + javadoc)
 mvn package -Dgpg.skip=true
@@ -233,4 +233,4 @@ GovernanceKernelFactory.builder(provider)
 | ConversationContextTest | 6 | Multi-turn history, isolation, kernel integration |
 | KernelListenerTest | 5 | Event hooks fire at correct lifecycle points |
 | ReflectionLoopTest | 4 | Generate → Critique → Accept/Reject |
-| **Total** | **65** | |
+| **Total** | **67** | |
