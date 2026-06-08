@@ -13,7 +13,7 @@ A governance middleware for BDI agents that use Large Language Models. Every LLM
 <dependency>
     <groupId>com.generativelayers</groupId>
     <artifactId>generative-layers-core</artifactId>
-    <version>0.1.2</version>
+    <version>0.1.3</version>
 </dependency>
 ```
 
@@ -61,6 +61,11 @@ mvn compile astra:deploy
     gl.accept(Cid);
     .print("Adopted: ", Label).
 ```
+
+## What's New in v0.1.3
+
+- **Multi-provider fix** — `use_provider()` now preserves kernel state (candidates, results, traces) when switching providers mid-session
+- **Cross-LLM patterns** — patterns 4, 5, 7, 8 now work correctly with multiple providers in the same agent
 
 ## What's New in v0.1.2
 

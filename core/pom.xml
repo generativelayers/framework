@@ -6,7 +6,7 @@
 
     <groupId>com.generativelayers</groupId>
     <artifactId>generative-layers-core</artifactId>
-    <version>0.1.2</version>
+    <version>0.1.3</version>
     <packaging>jar</packaging>
 
     <name>Generative Layers Core</name>

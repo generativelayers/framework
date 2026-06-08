@@ -65,6 +65,15 @@ public final class GovernanceKernel {
         this.listeners = listeners == null ? List.of() : List.copyOf(listeners);
     }
 
+    /** Create a new kernel with a different provider but the same stores.
+     *  This allows provider switching mid-session without losing candidates,
+     *  results, or traces from earlier invocations. */
+    public GovernanceKernel withProvider(KernelPorts.GenerativeProvider newProvider) {
+        return new GovernanceKernel(newProvider, validator, governance, admissibility,
+                blobs, candidates, assessments, results, traces, metrics,
+                retryPolicy, listeners);
+    }
+
     public ResourceResult invoke(ResourceRequest request) {
         metrics.increment("gl.invoke.total");
 

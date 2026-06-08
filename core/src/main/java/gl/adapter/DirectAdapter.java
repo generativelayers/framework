@@ -75,7 +75,7 @@ public final class DirectAdapter implements ResourceActions {
         }
         ProviderConfig config = configBuilder.build();
         var provider = ProviderRegistry.resolve(config);
-        this.kernel = GovernanceKernelFactory.withProvider(provider);
+        this.kernel = kernel.withProvider(provider);
         this.bodies = GenerativeBodyRuntime.createStandardRegistry(this.kernel);
         return true;
     }
