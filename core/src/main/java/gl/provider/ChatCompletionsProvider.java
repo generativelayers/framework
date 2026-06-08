@@ -140,15 +140,36 @@ public final class ChatCompletionsProvider implements KernelPorts.GenerativeProv
                 .POST(HttpRequest.BodyPublishers.ofString(body))
                 .build();
 
-        HttpResponse<String> response = client.send(httpRequest,
-                HttpResponse.BodyHandlers.ofString());
+        HttpResponse<String> response = null;
+        int maxRetries = 4;
+        long[] waitSeconds = {15, 30, 45, 60};
+        for (int attempt = 0; attempt <= maxRetries; attempt++) {
+            response = client.send(httpRequest, HttpResponse.BodyHandlers.ofString());
+            if (response.statusCode() == 429 && attempt < maxRetries) {
+                System.err.println("[ChatCompletionsProvider] Rate limited (429). "
+                        + "Waiting " + waitSeconds[attempt] + "s "
+                        + "(attempt " + (attempt + 1) + "/" + maxRetries + ")");
+                Thread.sleep(waitSeconds[attempt] * 1000);
+            } else {
+                break;
+            }
+        }
 
         if (response.statusCode() < 200 || response.statusCode() >= 300) {
             throw new IOException("provider HTTP " + response.statusCode()
-                    + ": " + response.body());
+                    + ": " + response.body().substring(0,
+                    Math.min(300, response.body().length())));
         }
 
         String text = ProviderUtils.extractJsonString(response.body(), "\"content\":");
+
+        // Strip markdown code fences if present
+        if (text != null && text.startsWith("```")) {
+            text = text.replaceAll("^```[a-zA-Z]*\\s*", "")
+                       .replaceAll("```\\s*$", "")
+                       .trim();
+        }
+
         return new ProviderOutput(providerName, model,
                 text != null ? text : response.body(),
                 Map.of("status", Integer.toString(response.statusCode())));
