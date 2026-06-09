@@ -172,7 +172,7 @@ ResourceResult result = kernel.invoke(new ResourceRequest(
 <dependency>
     <groupId>com.generativelayers</groupId>
     <artifactId>generative-layers-core</artifactId>
-    <version>0.1.3</version>
+    <version>0.1.5</version>
 </dependency>
 ```
 

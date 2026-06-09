@@ -183,22 +183,35 @@ public final class GovernanceKernel {
         return assessment;
     }
 
-    public AdmissibilityDecision checkAdmissibility(String candidateId) {
-        return candidates.get(candidateId)
-                .map(c -> admissibility.check(c, assessments.forTarget(candidateId)))
-                .orElseGet(() -> new AdmissibilityDecision(Outcomes.AdmissibilityOutcome.INADMISSIBLE, "candidate not found", Map.of("candidateId", candidateId == null ? "" : candidateId)));
+    /** Resolve a candidate by candidate ID or result ID.
+     *  Agents commonly pass result IDs to admissible/accept/reject,
+     *  so this method transparently resolves both. */
+    private Optional<Candidate> resolveCandidate(String id) {
+        // 1. Direct lookup by candidate ID
+        Optional<Candidate> direct = candidates.get(id);
+        if (direct.isPresent()) return direct;
+        // 2. Resolve result ID → candidate
+        return candidates.all().stream()
+                .filter(c -> id.equals(c.sourceResultId()))
+                .findFirst();
     }
 
-    public Optional<Candidate> acceptCandidate(String candidateId) {
-        return candidates.get(candidateId).map(c -> {
+    public AdmissibilityDecision checkAdmissibility(String candidateOrResultId) {
+        return resolveCandidate(candidateOrResultId)
+                .map(c -> admissibility.check(c, assessments.forTarget(c.candidateId())))
+                .orElseGet(() -> new AdmissibilityDecision(Outcomes.AdmissibilityOutcome.INADMISSIBLE, "candidate not found", Map.of("id", candidateOrResultId == null ? "" : candidateOrResultId)));
+    }
+
+    public Optional<Candidate> acceptCandidate(String candidateOrResultId) {
+        return resolveCandidate(candidateOrResultId).map(c -> {
             Candidate accepted = candidates.update(c.withStatus(CandidateStatus.ACCEPTED_BY_AGENT));
             fire(l -> l.onCandidateAccepted(accepted));
             return accepted;
         });
     }
 
-    public Optional<Candidate> rejectCandidate(String candidateId) {
-        return candidates.get(candidateId).map(c -> {
+    public Optional<Candidate> rejectCandidate(String candidateOrResultId) {
+        return resolveCandidate(candidateOrResultId).map(c -> {
             Candidate rejected = candidates.update(c.withStatus(CandidateStatus.REJECTED_BY_AGENT));
             fire(l -> l.onCandidateRejected(rejected));
             return rejected;
@@ -206,7 +219,7 @@ public final class GovernanceKernel {
     }
 
     public Optional<ResourceResult> result(String resultId) { return results.get(resultId); }
-    public Optional<Candidate> candidate(String candidateId) { return candidates.get(candidateId); }
+    public Optional<Candidate> candidate(String candidateOrResultId) { return resolveCandidate(candidateOrResultId); }
     public Optional<Blob> blob(String blobId) { return blobs.get(blobId); }
     public Optional<TraceRecord> trace(String traceId) { return traces.get(traceId); }
     public boolean valid(String resultId) { return result(resultId).map(ResourceResult::success).orElse(false); }

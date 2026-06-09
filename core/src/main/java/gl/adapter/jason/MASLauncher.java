@@ -33,6 +33,19 @@ import java.util.logging.LogManager;
  */
 public final class MASLauncher {
 
+    // Runs before main() — prevents ClassNotFoundException for
+    // jason.runtime.MASConsoleLogHandler (only available in jason-cli).
+    static {
+        try {
+            InputStream config = MASLauncher.class
+                    .getResourceAsStream("/gl/logging.properties");
+            if (config != null) {
+                LogManager.getLogManager().readConfiguration(config);
+                config.close();
+            }
+        } catch (Exception ignored) {}
+    }
+
     private MASLauncher() {}
 
     /**
@@ -87,7 +100,7 @@ public final class MASLauncher {
 
     // ── Internal ────────────────────────────────────────────────
 
-    /** Scan classpath root for any .mas2j file. Returns filename or null. */
+    /** Scan classpath root for any .mas2j file. Returns absolute path or null. */
     private static String discoverMas2j() {
         try {
             Enumeration<URL> roots = MASLauncher.class.getClassLoader().getResources("");
@@ -96,7 +109,7 @@ public final class MASLauncher {
                 if (dir.isDirectory()) {
                     for (File f : dir.listFiles()) {
                         if (f.isFile() && f.getName().endsWith(".mas2j")) {
-                            return f.getName();
+                            return f.getAbsolutePath();
                         }
                     }
                 }

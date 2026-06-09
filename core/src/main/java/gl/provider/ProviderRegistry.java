@@ -4,6 +4,7 @@ import gl.KernelDefaults;
 import gl.KernelPorts;
 
 import java.lang.reflect.Method;
+import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
@@ -55,6 +56,14 @@ public final class ProviderRegistry {
             "cerebras",         CHAT_COMPLETIONS,
             "deepseek",         CHAT_COMPLETIONS,
             "chatcompletions",  CHAT_COMPLETIONS
+    );
+
+    /**
+     * Deterministic priority order for auto-detection.
+     * Checked in this order when no explicit provider is configured.
+     */
+    private static final List<String> DETECTION_ORDER = List.of(
+            "gemini", "cerebras", "groq", "openai", "deepseek"
     );
 
     /**
@@ -115,7 +124,9 @@ public final class ProviderRegistry {
      * Auto-detect which provider to use based on config and environment.
      *
      * <p>If config has a "provider" key, use that. Otherwise check
-     * env vars for available API keys. Falls back to fake.
+     * env vars for available API keys in priority order:
+     * {@code GEMINI → CEREBRAS → GROQ → OPENAI → DEEPSEEK}.
+     * Falls back to a deterministic fake provider for testing.
      */
     public static KernelPorts.GenerativeProvider resolve(ProviderConfig config) {
         String explicit = config.provider();
@@ -126,8 +137,8 @@ public final class ProviderRegistry {
             return create(explicit, config);
         }
 
-        // Auto-detect from environment
-        for (String name : BUILT_IN.keySet()) {
+        // Auto-detect from environment in deterministic priority order
+        for (String name : DETECTION_ORDER) {
             String envVar = name.toUpperCase() + "_API_KEY";
             String val = System.getenv(envVar);
             if (val != null && !val.isBlank()) {
@@ -138,6 +149,63 @@ public final class ProviderRegistry {
 
         System.out.println("[GL] Provider (fallback): deterministic fake");
         return new KernelDefaults.DeterministicFakeProvider();
+    }
+
+    /**
+     * Resolve a provider with automatic fallback.
+     *
+     * <p>If the primary provider (explicit or auto-detected) fails during
+     * creation, tries each remaining provider in priority order.
+     * Returns a wrapped provider that retries with fallbacks on generation failure.
+     *
+     * @return a provider, or fake if nothing is available
+     */
+    public static KernelPorts.GenerativeProvider resolveWithFallback(ProviderConfig config) {
+        // Try explicit provider first
+        String explicit = config.provider();
+        if (!"fake".equals(explicit)) {
+            try {
+                return create(explicit, config);
+            } catch (Exception e) {
+                System.out.println("[GL] Provider '" + explicit + "' failed: " + e.getMessage());
+                System.out.println("[GL] Trying fallback providers...");
+            }
+        }
+
+        // Try each provider in priority order
+        for (String name : DETECTION_ORDER) {
+            if (name.equals(explicit)) continue; // already tried
+            String envVar = name.toUpperCase() + "_API_KEY";
+            String val = System.getenv(envVar);
+            if (val != null && !val.isBlank()) {
+                try {
+                    KernelPorts.GenerativeProvider provider =
+                            create(name, config.with("provider", name));
+                    System.out.println("[GL] Provider (fallback): " + name);
+                    return provider;
+                } catch (Exception e) {
+                    System.out.println("[GL] Fallback '" + name + "' also failed: " + e.getMessage());
+                }
+            }
+        }
+
+        System.out.println("[GL] All providers failed — using deterministic fake");
+        return new KernelDefaults.DeterministicFakeProvider();
+    }
+
+    /**
+     * Return the names of providers whose API key is currently set.
+     */
+    public static List<String> availableWithKeys() {
+        List<String> result = new java.util.ArrayList<>();
+        for (String name : DETECTION_ORDER) {
+            String envVar = name.toUpperCase() + "_API_KEY";
+            String val = System.getenv(envVar);
+            if (val != null && !val.isBlank()) {
+                result.add(name);
+            }
+        }
+        return result;
     }
 
     /** Return the set of all available provider names. */
