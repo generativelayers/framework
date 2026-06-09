@@ -67,7 +67,7 @@ mvn compile astra:deploy
 - **Multi-provider fix** — `use_provider()` now preserves kernel state (candidates, results, traces) when switching providers mid-session
 - **Cross-LLM patterns** — patterns 4, 5, 7, 8 now work correctly with multiple providers in the same agent
 
-## What's New in v0.1.2
+## What's New in v0.1.5
 
 - **Short public aliases** — `module gl.astra.GL gl;` for ASTRA, `makeArtifact("gl", "gl.jacamo.GL", [], Id);` for JaCaMo
 - **Structured JSON outputs** — dynamic schema-driven generation for Gemini and ChatCompletions providers
