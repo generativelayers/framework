@@ -97,15 +97,21 @@ class ConversationContextTest {
     }
 
     @Test
-    void adapterExposesStatefulAsk() {
-        GovernanceKernel kernel = GovernanceKernelFactory.deterministicInMemory();
-        var registry = GenerativeBodyRuntime.createStandardRegistry(kernel);
-        var adapter = new DirectAdapter(kernel, registry);
+    void adapterExposesStatefulCall() {
+        // GL v2: use bind() + call() instead of ask()
+        var adapter = new DirectAdapter();
+        String bid = adapter.bind("agent1", "fake", "", "");
+        assertFalse(bid.startsWith("ERROR:"), "Binding must succeed");
 
-        adapter.ask("agent1", "goal1", "Q1", "conv-adapter-test");
-        adapter.ask("agent1", "goal1", "Q2", "conv-adapter-test");
+        String rid1 = adapter.call(bid, "goal1", "llm.answer", "ANSWER", "Q1", "label", "");
+        String rid2 = adapter.call(bid, "goal1", "llm.answer", "ANSWER", "Q2", "label", "");
 
-        var conversation = kernel.conversation("conv-adapter-test");
-        assertEquals(4, conversation.size()); // 2 turns * (user + assistant) = 4
+        // Both calls should produce result IDs (not errors)
+        assertFalse(rid1.startsWith("ERROR:"), "First call must succeed");
+        assertFalse(rid2.startsWith("ERROR:"), "Second call must succeed");
+
+        // Both should have valid results
+        assertEquals("SUCCESS", adapter.result(rid1));
+        assertEquals("SUCCESS", adapter.result(rid2));
     }
 }

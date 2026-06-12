@@ -12,7 +12,7 @@ import java.util.logging.LogManager;
  * Zero-boilerplate launcher for Jason MAS projects that use
  * the Generative Layers framework.
  *
- * <p>Can be used directly as the main class — no per-project
+ * <p>Can be used directly as the main class -- no per-project
  * {@code Launcher.java} is needed. The launcher auto-discovers
  * the {@code .mas2j} file on the classpath:
  *
@@ -33,7 +33,7 @@ import java.util.logging.LogManager;
  */
 public final class MASLauncher {
 
-    // Runs before main() — prevents ClassNotFoundException for
+    // Runs before main() -- prevents ClassNotFoundException for
     // jason.runtime.MASConsoleLogHandler (only available in jason-cli).
     static {
         try {
@@ -49,7 +49,7 @@ public final class MASLauncher {
     private MASLauncher() {}
 
     /**
-     * Main entry point — auto-discovers or accepts a .mas2j argument.
+     * Main entry point -- auto-discovers or accepts a .mas2j argument.
      *
      * <p>Resolution order:
      * <ol>
@@ -98,7 +98,7 @@ public final class MASLauncher {
         run(mas2j);
     }
 
-    // ── Internal ────────────────────────────────────────────────
+    // -- Internal ------------------------------------------------
 
     /** Scan classpath root for any .mas2j file. Returns absolute path or null. */
     private static String discoverMas2j() {

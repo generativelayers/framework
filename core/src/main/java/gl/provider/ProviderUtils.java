@@ -4,7 +4,7 @@ package gl.provider;
  * Shared utilities for provider implementations.
  *
  * <p>Extracts common JSON string parsing and escaping logic
- * used by both {@link GeminiProvider} and {@link OpenAiProvider}.
+ * used by both {@link GeminiProvider} and {@link ChatCompletionsProvider}.
  */
 final class ProviderUtils {
     private ProviderUtils() {}

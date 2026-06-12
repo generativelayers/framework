@@ -12,7 +12,7 @@ import gl.model.*;
  *
  * <p>Example:
  * <pre>
- *   GovernanceKernelFactory.withProvider(provider)
+ *   GovernanceKernelFactory.builder(provider)
  *       .withListener(new KernelListener() {
  *           @Override public void onCandidateAccepted(Candidate c) {
  *               logger.info("Candidate accepted: " + c.candidateId());
@@ -32,7 +32,7 @@ public interface KernelListener {
     /** Called when output validation fails. */
     default void onValidationFailed(ResourceRequest request, ValidationResult result) {}
 
-    /** Called when a candidate is created (PROPOSED or VALIDATED). */
+    /** Called when a candidate is created after validation. The candidate may be VALIDATED or INVALID. */
     default void onCandidateCreated(Candidate candidate) {}
 
     /** Called when an agent accepts a candidate. */

@@ -11,12 +11,9 @@ import java.util.Objects;
  * name, model, temperature, token limits, API key, endpoint, etc.
  * Provider implementations read the fields they need and ignore the rest.
  *
- * <p>Usage from ASTRA:
+ * <p>Usage from ASTRA (GL v2):
  * <pre>
- *   gl.configure("provider", "gemini");
- *   gl.configure("model", "gemini-2.5-flash");
- *   gl.configure("temperature", "0.2");
- *   gl.use_provider();
+ *   string bid = gl.bind("agent1", "gemini", "gemini-2.5-flash", "temperature=0.2");
  * </pre>
  */
 public final class ProviderConfig {
@@ -36,7 +33,7 @@ public final class ProviderConfig {
         return new Builder().set("provider", provider).build();
     }
 
-    // ── Typed accessors ─────────────────────────────────────────
+    // -- Typed accessors -----------------------------------------
 
     public String provider()      { return get("provider", "fake"); }
     public String model()         { return get("model", ""); }
@@ -87,7 +84,7 @@ public final class ProviderConfig {
     @Override
     public String toString() { return "ProviderConfig" + values; }
 
-    // ── Builder ─────────────────────────────────────────────────
+    // -- Builder -------------------------------------------------
 
     public static class Builder {
         private final Map<String, String> values = new LinkedHashMap<>();

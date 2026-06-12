@@ -38,7 +38,7 @@ public final class GoalDecompositionTest {
         bodies = GenerativeBodyRuntime.createStandardRegistry(kernel);
     }
 
-    // ─── Basic decomposition ────────────────────────────────────
+    // --- Basic decomposition ------------------------------------
 
     @Test
     void decomposeGoalProducesTaskDecompositionCandidate() {
@@ -60,7 +60,7 @@ public final class GoalDecompositionTest {
         assertEquals(CandidateStatus.VALIDATED, candidate.status());
     }
 
-    // ─── Decomposed steps are extractable ───────────────────────
+    // --- Decomposed steps are extractable -----------------------
 
     @Test
     void decomposedStepsAreExtractableAsFields() {
@@ -73,16 +73,17 @@ public final class GoalDecompositionTest {
         ));
 
         assertTrue(result.resourceResult().success());
-        String step1 = kernel.field(result.resourceResult().resultId(), "step1");
-        String step2 = kernel.field(result.resourceResult().resultId(), "step2");
-        String step3 = kernel.field(result.resourceResult().resultId(), "step3");
+        Candidate c = kernel.candidate(result.candidateId()).orElseThrow();
+        String step1 = c.fields().get("step1");
+        String step2 = c.fields().get("step2");
+        String step3 = c.fields().get("step3");
 
         assertFalse(step1.isBlank(), "step1 must be extractable");
         assertFalse(step2.isBlank(), "step2 must be extractable");
         assertFalse(step3.isBlank(), "step3 must be extractable");
     }
 
-    // ─── Decomposition is not auto-executed ─────────────────────
+    // --- Decomposition is not auto-executed ---------------------
 
     @Test
     void decompositionRequiresExplicitAdoption() {
@@ -97,15 +98,16 @@ public final class GoalDecompositionTest {
         // Before acceptance: candidate is VALIDATED, not ACCEPTED
         Candidate before = kernel.candidate(result.candidateId()).orElseThrow();
         assertEquals(CandidateStatus.VALIDATED, before.status(),
-                "Plan must be VALIDATED, not auto-executed — agent decides when to adopt sub-goals");
+                "Plan must be VALIDATED, not auto-executed -- agent decides when to adopt sub-goals");
 
         // Agent explicitly accepts the plan
-        Candidate accepted = kernel.acceptCandidate(result.candidateId()).orElseThrow();
+        kernel.recordDecision(result.candidateId(), DecisionType.ACCEPTED, "plan approved");
+        Candidate accepted = kernel.candidate(result.candidateId()).orElseThrow();
         assertEquals(CandidateStatus.ACCEPTED_BY_AGENT, accepted.status(),
                 "After accept, status must be ACCEPTED_BY_AGENT");
     }
 
-    // ─── Agent can reject a bad plan ────────────────────────────
+    // --- Agent can reject a bad plan ----------------------------
 
     @Test
     void agentCanRejectBadDecomposition() {
@@ -119,7 +121,7 @@ public final class GoalDecompositionTest {
 
         // Agent assesses the plan as low quality
         kernel.assess("planner_agent", result.candidateId(), "candidate",
-                Outcomes.AssessmentVerdict.REJECT, 0.85,
+                Outcomes.AssessmentVerdict.REJECT_VERDICT, 0.85,
                 List.of("feasibility"), List.of(), "plan steps are too vague");
 
         // Plan should be inadmissible now
@@ -127,11 +129,12 @@ public final class GoalDecompositionTest {
                 "Rejected plan must not be admissible");
 
         // Agent explicitly rejects
-        Candidate rejected = kernel.rejectCandidate(result.candidateId()).orElseThrow();
+        kernel.recordDecision(result.candidateId(), DecisionType.REJECTED, "plan too vague");
+        Candidate rejected = kernel.candidate(result.candidateId()).orElseThrow();
         assertEquals(CandidateStatus.REJECTED_BY_AGENT, rejected.status());
     }
 
-    // ─── Decomposition has its own trace ────────────────────────
+    // --- Decomposition has its own trace ------------------------
 
     @Test
     void decompositionProducesAuditTrace() {

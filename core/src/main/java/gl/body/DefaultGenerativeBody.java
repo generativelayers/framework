@@ -38,7 +38,7 @@ public final class DefaultGenerativeBody implements GenerativeBody {
             prompt = sb.toString();
         }
 
-        ResourceRequest request = new ResourceRequest(null, invocation.agentId(), invocation.goalId(), descriptor.bodyId(),
+        ResourceRequest request = new ResourceRequest(Ids.id("req"), invocation.agentId(), invocation.goalId(), descriptor.bodyId(),
                 invocation.affordance().name().toLowerCase(), type, prompt, schema,
                 GovernanceContext.empty(), invocation.parameters(), invocation.conversationId());
         ResourceResult result = kernel.invoke(request);

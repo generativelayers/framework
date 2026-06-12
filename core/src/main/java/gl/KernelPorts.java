@@ -10,16 +10,16 @@ import java.util.Optional;
  *
  * <p>All kernel behaviour is defined through these pluggable ports:
  * <ul>
- *   <li>{@code GenerativeProvider} — LLM backend</li>
- *   <li>{@code ResponseValidator} — post-generation schema validation</li>
- *   <li>{@code GovernancePolicy} — pre-generation policy gate</li>
- *   <li>{@code AdmissibilityChecker} — pre-acceptance admissibility gate</li>
- *   <li>{@code BlobStore} — content-addressed storage</li>
- *   <li>{@code CandidateStore} — governed candidate lifecycle</li>
- *   <li>{@code AssessmentStore} — peer assessment records</li>
- *   <li>{@code ResultStore} — generation result records</li>
- *   <li>{@code TraceSink} — append-only audit trail</li>
- *   <li>{@code MetricsSink} — lightweight metrics collector</li>
+ *   <li>{@code GenerativeProvider} -- LLM backend</li>
+ *   <li>{@code ResponseValidator} -- post-generation schema validation</li>
+ *   <li>{@code GovernancePolicy} -- pre-generation policy gate</li>
+ *   <li>{@code AdmissibilityChecker} -- pre-acceptance admissibility gate</li>
+ *   <li>{@code BlobStore} -- content-addressed storage</li>
+ *   <li>{@code CandidateStore} -- governed candidate lifecycle</li>
+ *   <li>{@code AssessmentStore} -- peer assessment records</li>
+ *   <li>{@code ResultStore} -- generation result records</li>
+ *   <li>{@code TraceSink} -- append-only audit trail</li>
+ *   <li>{@code MetricsSink} -- lightweight metrics collector</li>
  * </ul>
  */
 public final class KernelPorts {
@@ -87,5 +87,13 @@ public final class KernelPorts {
         void increment(String metricName);
         void observe(String metricName, double value);
         List<String> events();
+    }
+
+    /** Store for accept/reject decision records linked to candidates. */
+    public interface DecisionStore {
+        Decision put(Decision decision);
+        Optional<Decision> get(String decisionId);
+        List<Decision> forCandidate(String candidateId);
+        List<Decision> all();
     }
 }

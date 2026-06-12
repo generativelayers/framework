@@ -2,51 +2,23 @@ package gl.body;
 
 import gl.model.CandidateType;
 import gl.GovernanceKernel;
-import gl.GovernanceKernelFactory;
-import gl.provider.ProviderConfig;
-import gl.provider.ProviderRegistry;
 import java.util.List;
 import java.util.Map;
 
 /**
- * Runtime wiring: creates {@link DefaultGenerativeBody} instances from a
- * {@link GovernanceKernel} and registers them in the {@link GenerativeBodyRegistry}.
+ * Factory for standard {@link GenerativeBodyRegistry} instances.
  *
- * <p>Uses lazy initialization — the kernel and registry are created on first access,
- * not at class-load time. This avoids premature provider auto-detection.
+ * <p>Creates {@link DefaultGenerativeBody} instances from a
+ * {@link GovernanceKernel} and registers them in a {@link GenerativeBodyRegistry}.
+ *
+ * <p>In GL v2, provider binding goes through {@code bind() > call()}.
+ * This class only provides the factory method used by tests and adapters.
  */
 public final class GenerativeBodyRuntime {
 
-    private static volatile GovernanceKernel lazyKernel;
-    private static volatile GenerativeBodyRegistry lazyRegistry;
-
     private GenerativeBodyRuntime() {}
 
-    /** Get the shared kernel, creating it lazily on first access. */
-    public static GovernanceKernel kernel() {
-        if (lazyKernel == null) {
-            synchronized (GenerativeBodyRuntime.class) {
-                if (lazyKernel == null) {
-                    lazyKernel = GovernanceKernelFactory.withProvider(
-                            ProviderRegistry.resolve(ProviderConfig.empty()));
-                }
-            }
-        }
-        return lazyKernel;
-    }
-
-    /** Get the shared registry, creating it lazily on first access. */
-    public static GenerativeBodyRegistry registry() {
-        if (lazyRegistry == null) {
-            synchronized (GenerativeBodyRuntime.class) {
-                if (lazyRegistry == null) {
-                    lazyRegistry = createStandardRegistry(kernel());
-                }
-            }
-        }
-        return lazyRegistry;
-    }
-
+    /** Create a standard registry with six pre-configured bodies for the given kernel. */
     public static GenerativeBodyRegistry createStandardRegistry(GovernanceKernel kernel) {
         GenerativeBodyRegistry registry = new GenerativeBodyRegistry();
         registry.register(new DefaultGenerativeBody(kernel, new BodyDescriptor("llm.answer", BodyKind.LLM, "General answer body", List.of(BodyAffordance.ANSWER, BodyAffordance.CLASSIFY, BodyAffordance.SUMMARISE), CandidateType.CANDIDATE_ANSWER, Map.of())));

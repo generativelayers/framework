@@ -28,24 +28,23 @@ import java.util.function.Function;
  *   ProviderRegistry.register("my-llm", config -&gt; new MyLlmProvider(config));
  * </pre>
  *
- * <h3>Usage from ASTRA</h3>
+ * <h3>Usage from ASTRA (GL v2)</h3>
  * <pre>
- *   gl.configure("provider", "gemini");
- *   gl.configure("model", "gemini-2.5-flash");
- *   gl.use_provider();
+ *   string bid = gl.bind("agent1", "gemini", "gemini-2.5-flash", "");
+ *   string rid = gl.call(bid, "goal1", "llm.answer", "ANSWER", "prompt", "label", "");
  * </pre>
  */
 public final class ProviderRegistry {
     private ProviderRegistry() {}
 
-    // ── Custom factories (registered at runtime) ────────────────
+    // -- Custom factories (registered at runtime) ----------------
 
     private static final Map<String, Function<ProviderConfig, KernelPorts.GenerativeProvider>>
             CUSTOM = new ConcurrentHashMap<>();
-    // ── Built-in provider class names (resolved via reflection) ─
+    // -- Built-in provider class names (resolved via reflection) -
     // All Chat Completions API providers share one class.
     // Known aliases are defined inside ChatCompletionsProvider.KNOWN_ENDPOINTS.
-    // Users can add any provider via gl.configure("endpoint", "...").
+    // Users can add any provider via bind("agent", "chatcompletions", "model", "endpoint=...").
 
     private static final String CHAT_COMPLETIONS = "gl.provider.ChatCompletionsProvider";
 
@@ -83,7 +82,7 @@ public final class ProviderRegistry {
      *
      * <p>Resolution order:
      * <ol>
-     *   <li>"fake" / "deterministic" → built-in fake provider</li>
+     *   <li>"fake" / "deterministic" > built-in fake provider</li>
      *   <li>Custom registry (registered via {@link #register})</li>
      *   <li>Built-in class name map (resolved via reflection)</li>
      * </ol>
@@ -108,7 +107,7 @@ public final class ProviderRegistry {
             return createViaReflection(className, config);
         }
 
-        // 4. Unknown name — fall back to ChatCompletionsProvider if user set an endpoint
+        // 4. Unknown name -- fall back to ChatCompletionsProvider if user set an endpoint
         if (!config.endpoint().isEmpty()) {
             System.out.println("[GL] Using custom endpoint for '" + name + "'");
             return createViaReflection(CHAT_COMPLETIONS, config);
@@ -117,24 +116,30 @@ public final class ProviderRegistry {
         throw new IllegalArgumentException(
                 "[GL] Unknown provider: '" + name + "'. "
               + "Available: " + available() + ". "
-              + "Or set a custom endpoint: gl.configure(\"endpoint\", \"https://...\");");
+              + "Or set a custom endpoint in bind() config: \"endpoint=https://...\"");
     }
 
     /**
-     * Auto-detect which provider to use based on config and environment.
+     * Resolve which provider to use based on config and environment.
      *
-     * <p>If config has a "provider" key, use that. Otherwise check
-     * env vars for available API keys in priority order:
-     * {@code GEMINI → CEREBRAS → GROQ → OPENAI → DEEPSEEK}.
+     * <p>If config explicitly names a provider (including "fake"), use that.
+     * If no provider was set, auto-detect from env vars in priority order:
+     * {@code GEMINI > CEREBRAS > GROQ > OPENAI > DEEPSEEK}.
      * Falls back to a deterministic fake provider for testing.
      */
     public static KernelPorts.GenerativeProvider resolve(ProviderConfig config) {
-        String explicit = config.provider();
+        // If provider was explicitly set in config, respect it -- even "fake"
+        boolean explicitProvider = config.asMap().containsKey("provider");
 
-        if (!"fake".equals(explicit)) {
-            System.out.println("[GL] Provider: " + explicit
+        if (explicitProvider) {
+            String name = config.provider();
+            if ("fake".equals(name)) {
+                System.out.println("[GL] Provider: deterministic fake (explicit)");
+                return new KernelDefaults.DeterministicFakeProvider();
+            }
+            System.out.println("[GL] Provider: " + name
                     + (config.model().isEmpty() ? "" : " (" + config.model() + ")"));
-            return create(explicit, config);
+            return create(name, config);
         }
 
         // Auto-detect from environment in deterministic priority order
@@ -151,63 +156,6 @@ public final class ProviderRegistry {
         return new KernelDefaults.DeterministicFakeProvider();
     }
 
-    /**
-     * Resolve a provider with automatic fallback.
-     *
-     * <p>If the primary provider (explicit or auto-detected) fails during
-     * creation, tries each remaining provider in priority order.
-     * Returns a wrapped provider that retries with fallbacks on generation failure.
-     *
-     * @return a provider, or fake if nothing is available
-     */
-    public static KernelPorts.GenerativeProvider resolveWithFallback(ProviderConfig config) {
-        // Try explicit provider first
-        String explicit = config.provider();
-        if (!"fake".equals(explicit)) {
-            try {
-                return create(explicit, config);
-            } catch (Exception e) {
-                System.out.println("[GL] Provider '" + explicit + "' failed: " + e.getMessage());
-                System.out.println("[GL] Trying fallback providers...");
-            }
-        }
-
-        // Try each provider in priority order
-        for (String name : DETECTION_ORDER) {
-            if (name.equals(explicit)) continue; // already tried
-            String envVar = name.toUpperCase() + "_API_KEY";
-            String val = System.getenv(envVar);
-            if (val != null && !val.isBlank()) {
-                try {
-                    KernelPorts.GenerativeProvider provider =
-                            create(name, config.with("provider", name));
-                    System.out.println("[GL] Provider (fallback): " + name);
-                    return provider;
-                } catch (Exception e) {
-                    System.out.println("[GL] Fallback '" + name + "' also failed: " + e.getMessage());
-                }
-            }
-        }
-
-        System.out.println("[GL] All providers failed — using deterministic fake");
-        return new KernelDefaults.DeterministicFakeProvider();
-    }
-
-    /**
-     * Return the names of providers whose API key is currently set.
-     */
-    public static List<String> availableWithKeys() {
-        List<String> result = new java.util.ArrayList<>();
-        for (String name : DETECTION_ORDER) {
-            String envVar = name.toUpperCase() + "_API_KEY";
-            String val = System.getenv(envVar);
-            if (val != null && !val.isBlank()) {
-                result.add(name);
-            }
-        }
-        return result;
-    }
-
     /** Return the set of all available provider names. */
     public static Set<String> available() {
         Set<String> all = new java.util.TreeSet<>();
@@ -217,7 +165,7 @@ public final class ProviderRegistry {
         return all;
     }
 
-    // ── Reflection loader ───────────────────────────────────────
+    // -- Reflection loader ---------------------------------------
 
     /**
      * Load a provider class by name and invoke its

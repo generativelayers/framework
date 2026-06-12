@@ -4,209 +4,155 @@ import cartago.*;
 import gl.adapter.DirectAdapter;
 
 /**
- * JaCaMo/CArtAgO adapter for the Generative Layers framework.
+ * JaCaMo/CArtAgO adapter for the GL v2 framework.
  *
  * <p>Extends {@link cartago.Artifact} and delegates all GL commands to
- * {@link DirectAdapter} — the same pattern used by
- * {@link gl.adapter.astra.AstraAdapter} (ASTRA module) and
- * {@link gl.adapter.jason.JasonAdapter} (Jason internal actions).
+ * {@link DirectAdapter}. The artifact may expose lifecycle metadata as
+ * observable properties for platform integration. Generated candidate
+ * content is not automatically adopted as BDI belief; belief adoption
+ * remains an explicit host-agent operation.
  *
- * <p>All three adapters implement the same 16 commands from
- * {@link gl.adapter.ResourceActions}, ensuring platform parity:
- *
- * <table>
- *   <tr><th>Platform</th><th>Adapter</th><th>Agent syntax</th></tr>
- *   <tr><td>ASTRA</td><td>{@code AstraAdapter} (module)</td><td>{@code gl.invoke(...)}</td></tr>
- *   <tr><td>Jason</td><td>{@code JasonAdapter} (internal actions)</td><td>{@code gl.actions.invoke(...)}</td></tr>
- *   <tr><td>JaCaMo</td><td>{@code JaCaMoAdapter} (CArtAgO artifact)</td><td>{@code invoke(...)} on focused artifact</td></tr>
- * </table>
- *
- * <h3>Key difference from Jason/ASTRA adapters</h3>
- * <p>In CArtAgO, results are exposed as <b>observable properties</b> that
- * automatically become agent beliefs when the agent {@code focus}es on the
- * artifact. This is the CArtAgO "sensing" pattern — agents communicate
- * through the shared artifact environment rather than ACL messages.
- *
- * <h3>Usage in .mas2j</h3>
+ * <p>GL v2 -- 13 public commands:
  * <pre>
- * MAS my_app {
- *     environment: jaca.CartagoEnvironment
- *     agents:
- *         myAgent agentArchClass jaca.CAgentArch;
- * }
+ *   see > bind > call > result > candidate > check > get
+ *       > judge > decide > accept/reject > knowledge > explain
  * </pre>
  *
- * <h3>Usage in .asl</h3>
+ * <p>Usage in .asl:
  * <pre>
  * !start.
  * +!start &lt;-
  *     makeArtifact("gl", "gl.adapter.jacamo.JaCaMoAdapter", [], Id);
  *     focus(Id);
- *     use_provider;
- *     invoke("a", "g", "llm.answer", "ANSWER", "prompt", "f1,f2", Rid).
- *
- * +gl_result(Rid, Outcome, Valid) &lt;- .print("Result: ", Rid).
- * +gl_accepted(Cid, Fields)      &lt;- .print("Accepted: ", Fields).
+ *     see(Providers);
+ *     bind("agent1", "gemini", "gemini-2.5-flash", "", Bid);
+ *     call(Bid, "classify", "llm.answer", "ANSWER", "Classify: apple", "label", "", Rid);
+ *     candidate(Rid, Cid);
+ *     judge(Cid, "agent1", "APPROVE", 0.9, "looks correct", Aid);
+ *     decide(Cid, Adm);
+ *     accept(Cid, "valid classification", Did).
  * </pre>
  */
 public class JaCaMoAdapter extends Artifact {
 
     private DirectAdapter adapter;
 
-    // ── Lifecycle ───────────────────────────────────────────────
+    // -- Lifecycle -----------------------------------------------
 
-    /**
-     * Initialise the artifact with a fresh {@link DirectAdapter}.
-     */
     @OPERATION
     public void init() {
         adapter = new DirectAdapter();
         defineObsProperty("gl_ready", true);
     }
 
-    // ── Provider lifecycle ──────────────────────────────────────
+    // -- 1. see --
 
-    /** Auto-detect provider from GL_PROVIDER / GL_MODEL env vars (default: "fake"). */
     @OPERATION
-    public void use_provider() {
-        adapter.use_provider();
-        String provider = System.getenv("GL_PROVIDER");
-        if (provider == null || provider.isBlank()) provider = "fake";
-        defineObsProperty("gl_provider", provider);
+    public void see(OpFeedbackParam<String> result) {
+        result.set(adapter.see());
     }
 
-    /** Set provider by name. */
+    // -- 2. bind --
+
     @OPERATION
-    public void use_provider(String providerName) {
-        adapter.use_provider(providerName);
-        defineObsProperty("gl_provider", providerName);
+    public void bind(String agentId, String provider, String model, String config,
+                     OpFeedbackParam<String> result) {
+        String bindingId = adapter.bind(agentId, provider, model, config);
+        result.set(bindingId);
+        if (!bindingId.startsWith("ERROR:")) {
+            defineObsProperty("gl_binding", bindingId, agentId, provider, model);
+        }
     }
 
-    /** Set provider by name and model. */
+    // -- 3. call --
+
     @OPERATION
-    public void use_provider(String providerName, String model) {
-        adapter.use_provider(providerName, model);
-        defineObsProperty("gl_provider", providerName);
+    public void call(String bindingId, String goalId, String bodyId,
+                     String affordance, String prompt, String requiredFields,
+                     String context, OpFeedbackParam<String> result) {
+        String rid = adapter.call(bindingId, goalId, bodyId, affordance, prompt, requiredFields, context);
+        result.set(rid);
+        if (!rid.startsWith("ERROR:")) {
+            defineObsProperty("gl_result", rid, adapter.result(rid));
+        }
     }
 
-    /** Set a configuration key before activating a provider. */
+    // -- 4. result --
+
     @OPERATION
-    public void configure(String key, String value) {
-        adapter.configure(key, value);
+    public void result(String resultId, OpFeedbackParam<String> result) {
+        result.set(adapter.result(resultId));
     }
 
-    /** Return comma-separated list of available provider names. */
-    @OPERATION
-    public void providers(OpFeedbackParam<String> result) {
-        result.set(adapter.providers());
-    }
+    // -- 5. candidate --
 
-    // ── Generative body invocation ──────────────────────────────
-
-    /**
-     * Invoke a generative body. Returns result ID via {@link OpFeedbackParam}.
-     * Creates observable property: {@code gl_result(resultId, outcome, valid)}.
-     */
-    @OPERATION
-    public void invoke(String agentId, String goalId, String bodyId,
-                       String affordance, String prompt, String requiredCsv,
-                       OpFeedbackParam<String> resultId) {
-        String rid = adapter.invoke(agentId, goalId, bodyId, affordance, prompt, requiredCsv);
-        resultId.set(rid);
-        defineObsProperty("gl_result", rid, adapter.outcome(rid), adapter.valid(rid));
-    }
-
-    /** Invoke with belief-RAG context. */
-    @OPERATION
-    public void invoke_with_beliefs(String agentId, String goalId, String bodyId,
-                                     String affordance, String prompt,
-                                     String requiredCsv, String beliefsCsv,
-                                     OpFeedbackParam<String> resultId) {
-        String rid = adapter.invoke_with_beliefs(agentId, goalId, bodyId, affordance,
-                prompt, requiredCsv, beliefsCsv);
-        resultId.set(rid);
-        defineObsProperty("gl_result", rid, adapter.outcome(rid), adapter.valid(rid));
-    }
-
-    /** Shorthand: invoke llm.answer with ANSWER affordance. */
-    @OPERATION
-    public void ask(String agentId, String goalId, String prompt,
-                    OpFeedbackParam<String> resultId) {
-        String rid = adapter.ask(agentId, goalId, prompt);
-        resultId.set(rid);
-        defineObsProperty("gl_result", rid, adapter.outcome(rid), adapter.valid(rid));
-    }
-
-    // ── Result inspection ──────────────────────────────────────
-
-    /** Check whether a result passed schema validation. */
-    @OPERATION
-    public void valid(String resultId, OpFeedbackParam<Boolean> result) {
-        result.set(adapter.valid(resultId));
-    }
-
-    /** Extract a named field from a validated result. */
-    @OPERATION
-    public void field(String resultId, String fieldName, OpFeedbackParam<String> result) {
-        result.set(adapter.field(resultId, fieldName));
-    }
-
-    /** Get the candidate ID associated with a result. */
     @OPERATION
     public void candidate(String resultId, OpFeedbackParam<String> result) {
         result.set(adapter.candidate(resultId));
     }
 
-    /** Get the trace ID for auditability. */
+    // -- 6. check --
+
     @OPERATION
-    public void trace(String resultId, OpFeedbackParam<String> result) {
-        result.set(adapter.trace(resultId));
+    public void check(String refId, OpFeedbackParam<String> result) {
+        result.set(adapter.check(refId));
     }
 
-    /** Get the outcome name. */
+    // -- 7. get --
+
     @OPERATION
-    public void outcome(String resultId, OpFeedbackParam<String> result) {
-        result.set(adapter.outcome(resultId));
+    public void get(String candidateId, String fieldName, OpFeedbackParam<String> result) {
+        result.set(adapter.get(candidateId, fieldName));
     }
 
-    /** Return accepted knowledge for an agent. */
+    // -- 8. judge --
+
+    @OPERATION
+    public void judge(String candidateId, String assessorId, String verdict,
+                      double confidence, String rationale, OpFeedbackParam<String> result) {
+        result.set(adapter.judge(candidateId, assessorId, verdict, confidence, rationale));
+    }
+
+    // -- 9. decide --
+
+    @OPERATION
+    public void decide(String candidateId, OpFeedbackParam<String> result) {
+        result.set(adapter.decide(candidateId));
+    }
+
+    // -- 10. accept --
+
+    @OPERATION
+    public void accept(String candidateId, String reason, OpFeedbackParam<String> result) {
+        String decisionId = adapter.accept(candidateId, reason);
+        result.set(decisionId);
+        if (!decisionId.startsWith("ERROR:")) {
+            defineObsProperty("gl_accepted", candidateId, decisionId);
+        }
+    }
+
+    // -- 11. reject --
+
+    @OPERATION
+    public void reject(String candidateId, String reason, OpFeedbackParam<String> result) {
+        String decisionId = adapter.reject(candidateId, reason);
+        result.set(decisionId);
+        if (!decisionId.startsWith("ERROR:")) {
+            defineObsProperty("gl_rejected", candidateId, decisionId);
+        }
+    }
+
+    // -- 12. knowledge --
+
     @OPERATION
     public void knowledge(String agentId, OpFeedbackParam<String> result) {
         result.set(adapter.knowledge(agentId));
     }
 
-    // ── Candidate deliberation ─────────────────────────────────
+    // -- 13. explain --
 
-    /** Check whether a candidate passes admissibility. */
     @OPERATION
-    public void admissible(String candidateId, OpFeedbackParam<Boolean> result) {
-        result.set(adapter.admissible(candidateId));
-    }
-
-    /**
-     * Accept a candidate. Creates observable property:
-     * {@code gl_accepted(candidateId, fieldsCsv)}.
-     */
-    @OPERATION
-    public void accept(String candidateId) {
-        adapter.accept(candidateId);
-        defineObsProperty("gl_accepted", candidateId, adapter.knowledge(candidateId));
-    }
-
-    /**
-     * Reject a candidate. Creates observable property:
-     * {@code gl_rejected(candidateId)}.
-     */
-    @OPERATION
-    public void reject(String candidateId) {
-        adapter.reject(candidateId);
-        defineObsProperty("gl_rejected", candidateId);
-    }
-
-    /** Record an assessment from a peer agent. */
-    @OPERATION
-    public void assess(String assessorId, String candidateId,
-                       String verdict, double confidence, String explanation) {
-        adapter.assess(assessorId, candidateId, verdict, confidence, explanation);
+    public void explain(String refId, OpFeedbackParam<String> result) {
+        result.set(adapter.explain(refId));
     }
 }

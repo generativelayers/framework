@@ -7,7 +7,7 @@ import java.time.Instant;
 import java.util.List;
 
 /** Peer assessment of a candidate by an assessor agent.
- *  Contains a verdict (ACCEPT/REJECT/UNCERTAIN), confidence score,
+ *  Contains a verdict (APPROVE/REJECT_VERDICT/WARN/UNCERTAIN), confidence score,
  *  evaluation criteria, evidence references, and free-text explanation.
  *  Multiple assessments may target the same candidate. */
 public record Assessment(

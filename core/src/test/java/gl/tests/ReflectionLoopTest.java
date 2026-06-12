@@ -17,7 +17,7 @@ import static org.junit.jupiter.api.Assertions.*;
  * <p>Proves the self-critique agentic pattern works within the
  * Generative Layer. The reflection loop is:
  * <pre>
- *   Generate (ANSWER) → Critique (REFLECT) → Accept or Retry
+ *   Generate (ANSWER) -> Critique (REFLECT) -> Accept or Retry
  * </pre>
  *
  * <p>This maps to the modern "Reflection" pattern used by
@@ -39,7 +39,7 @@ public final class ReflectionLoopTest {
         bodies = GenerativeBodyRuntime.createStandardRegistry(kernel);
     }
 
-    // ─── Basic reflection: generate then critique ───────────────
+    // --- Basic reflection: generate then critique ---------------
 
     @Test
     void reflectionCritiqueProducesReflectionNote() {
@@ -50,7 +50,8 @@ public final class ReflectionLoopTest {
                 List.of("label", "confidence"), Map.of()
         ));
         assertEquals(InvocationStatus.CANDIDATE_READY, answer.status());
-        String answerText = kernel.field(answer.resourceResult().resultId(), "label");
+        Candidate answerCand = kernel.candidate(answer.candidateId()).orElseThrow();
+        String answerText = answerCand.fields().get("label");
         assertFalse(answerText.isBlank());
 
         // Step 2: Critique the answer using the reflection body
@@ -67,7 +68,7 @@ public final class ReflectionLoopTest {
                 "Critique must produce a REFLECTION_NOTE candidate type");
     }
 
-    // ─── Reflection loop: retry on negative critique ────────────
+    // --- Reflection loop: retry on negative critique ------------
 
     @Test
     void negativeReflectionLeadsToAnswerRejection() {
@@ -87,17 +88,19 @@ public final class ReflectionLoopTest {
         ));
 
         // Step 3: Agent reads critique verdict
-        String verdict = kernel.field(critique.resourceResult().resultId(), "verdict");
+        Candidate critiqueCand2 = kernel.candidate(critique.candidateId()).orElseThrow();
+        String verdict = critiqueCand2.fields().get("verdict");
         assertEquals("needs_evidence", verdict,
                 "Reflection mode in fake provider must return needs_evidence");
 
         // Step 4: Based on negative self-critique, agent rejects original answer
-        Candidate rejected = kernel.rejectCandidate(answer.candidateId()).orElseThrow();
+        kernel.recordDecision(answer.candidateId(), DecisionType.REJECTED, "negative self-critique");
+        Candidate rejected = kernel.candidate(answer.candidateId()).orElseThrow();
         assertEquals(CandidateStatus.REJECTED_BY_AGENT, rejected.status(),
                 "Agent must reject answer after negative self-critique");
     }
 
-    // ─── Both candidates produce independent traces ─────────────
+    // --- Both candidates produce independent traces -------------
 
     @Test
     void reflectionProducesIndependentTraces() {
@@ -118,7 +121,7 @@ public final class ReflectionLoopTest {
                 "Answer and critique must have independent trace records");
     }
 
-    // ─── Self-assessment via assess() ───────────────────────────
+    // --- Self-assessment via assess() ---------------------------
 
     @Test
     void agentCanSelfAssessUsingReflectionOutput() {
@@ -138,16 +141,17 @@ public final class ReflectionLoopTest {
         ));
 
         // Use critique output as basis for self-assessment
-        String critiqueVerdict = kernel.field(critique.resourceResult().resultId(), "verdict");
+        Candidate critiqueCand3 = kernel.candidate(critique.candidateId()).orElseThrow();
+        String critiqueVerdict = critiqueCand3.fields().get("verdict");
         double critiqueConfidence = Double.parseDouble(
-                kernel.field(critique.resourceResult().resultId(), "confidence")
+                critiqueCand3.fields().get("confidence")
         );
 
         Assessment selfAssessment = kernel.assess(
                 "agent_a",    // self-assessment
                 candidateId,
                 "candidate",
-                critiqueVerdict.equals("good") ? Outcomes.AssessmentVerdict.ACCEPT : Outcomes.AssessmentVerdict.REJECT,
+                critiqueVerdict.equals("good") ? Outcomes.AssessmentVerdict.APPROVE : Outcomes.AssessmentVerdict.REJECT_VERDICT,
                 critiqueConfidence,
                 List.of("self-reflection"),
                 List.of(critique.resourceResult().resultId()),

@@ -43,7 +43,7 @@ public final class CrossPlatformParityTest {
         bodiesB = GenerativeBodyRuntime.createStandardRegistry(kernelB);
     }
 
-    // ─── Scenario: Valid classification ─────────────────────────
+    // --- Scenario: Valid classification -------------------------
 
     @Test
     void validClassificationProducesIdenticalOutcomes() {
@@ -81,18 +81,18 @@ public final class CrossPlatformParityTest {
 
         // Both must extract identical fields
         assertEquals(
-                kernelA.field(resultA.resourceResult().resultId(), "label"),
-                kernelB.field(resultB.resourceResult().resultId(), "label"),
+                candA.fields().get("label"),
+                candB.fields().get("label"),
                 "Extracted label must be identical across platforms"
         );
         assertEquals(
-                kernelA.field(resultA.resourceResult().resultId(), "confidence"),
-                kernelB.field(resultB.resourceResult().resultId(), "confidence"),
+                candA.fields().get("confidence"),
+                candB.fields().get("confidence"),
                 "Extracted confidence must be identical across platforms"
         );
     }
 
-    // ─── Scenario: Governance denial ────────────────────────────
+    // --- Scenario: Governance denial ----------------------------
 
     @Test
     void governanceDenialIsIdenticalAcrossPlatforms() {
@@ -116,7 +116,7 @@ public final class CrossPlatformParityTest {
         assertTrue(resultB.candidateId().isBlank());
     }
 
-    // ─── Scenario: Invalid output handling ──────────────────────
+    // --- Scenario: Invalid output handling ----------------------
 
     @Test
     void invalidOutputHandlingIsIdenticalAcrossPlatforms() {
@@ -143,7 +143,7 @@ public final class CrossPlatformParityTest {
         assertEquals(CandidateStatus.INVALID, candA.status());
     }
 
-    // ─── Scenario: Assessment + admissibility ───────────────────
+    // --- Scenario: Assessment + admissibility -------------------
 
     @Test
     void assessmentAndAdmissibilityAreIdenticalAcrossPlatforms() {
@@ -165,10 +165,10 @@ public final class CrossPlatformParityTest {
 
         // Add identical rejecting assessments
         kernelA.assess("peer", resultA.candidateId(), "candidate",
-                Outcomes.AssessmentVerdict.REJECT, 0.95,
+                Outcomes.AssessmentVerdict.REJECT_VERDICT, 0.95,
                 List.of("accuracy"), List.of(), "hallucinated");
         kernelB.assess("peer", resultB.candidateId(), "candidate",
-                Outcomes.AssessmentVerdict.REJECT, 0.95,
+                Outcomes.AssessmentVerdict.REJECT_VERDICT, 0.95,
                 List.of("accuracy"), List.of(), "hallucinated");
 
         // Both must now be inadmissible
@@ -178,20 +178,21 @@ public final class CrossPlatformParityTest {
                 "Jason: candidate with rejecting assessment must be inadmissible");
     }
 
-    // ─── Scenario: Full lifecycle parity ────────────────────────
+    // --- Scenario: Full lifecycle parity ------------------------
 
     @Test
     void fullLifecycleIsIdenticalAcrossPlatforms() {
-        // ASTRA path: invoke → validate → assess → accept
+        // ASTRA path: invoke -> validate -> assess -> accept
         ResourceResult rA = kernelA.invoke(new ResourceRequest(
                 null, "astra_agent", "goal_1", "llm.answer", "answer",
                 CandidateType.CANDIDATE_ANSWER, "Return label",
                 ResponseSchema.required("schema", List.of("label")),
                 GovernanceContext.empty(), Map.of(), ""));
         kernelA.assess("assessor", rA.candidateId(), "candidate",
-                Outcomes.AssessmentVerdict.ACCEPT, 0.9,
+                Outcomes.AssessmentVerdict.APPROVE, 0.9,
                 List.of("schema"), List.of(), "valid");
-        Candidate acceptedA = kernelA.acceptCandidate(rA.candidateId()).orElseThrow();
+        kernelA.recordDecision(rA.candidateId(), DecisionType.ACCEPTED, "valid");
+        Candidate acceptedA = kernelA.candidate(rA.candidateId()).orElseThrow();
 
         // Jason path: identical
         ResourceResult rB = kernelB.invoke(new ResourceRequest(
@@ -200,9 +201,10 @@ public final class CrossPlatformParityTest {
                 ResponseSchema.required("schema", List.of("label")),
                 GovernanceContext.empty(), Map.of(), ""));
         kernelB.assess("assessor", rB.candidateId(), "candidate",
-                Outcomes.AssessmentVerdict.ACCEPT, 0.9,
+                Outcomes.AssessmentVerdict.APPROVE, 0.9,
                 List.of("schema"), List.of(), "valid");
-        Candidate acceptedB = kernelB.acceptCandidate(rB.candidateId()).orElseThrow();
+        kernelB.recordDecision(rB.candidateId(), DecisionType.ACCEPTED, "valid");
+        Candidate acceptedB = kernelB.candidate(rB.candidateId()).orElseThrow();
 
         // Final states must match
         assertEquals(acceptedA.status(), acceptedB.status());

@@ -141,8 +141,8 @@ public final class KernelDefaults {
     public static final class SimpleAdmissibilityChecker implements KernelPorts.AdmissibilityChecker {
         public AdmissibilityDecision check(Candidate candidate, List<Assessment> assessments) {
             if (candidate == null) return new AdmissibilityDecision(Outcomes.AdmissibilityOutcome.INADMISSIBLE, "missing candidate", Map.of());
-            if (candidate.status() != CandidateStatus.VALIDATED && candidate.status() != CandidateStatus.ASSESSED && candidate.status() != CandidateStatus.ACCEPTED_BY_AGENT) return new AdmissibilityDecision(Outcomes.AdmissibilityOutcome.INADMISSIBLE, "candidate is not validated or assessed", Map.of());
-            boolean rejected = assessments != null && assessments.stream().anyMatch(a -> a.verdict() == Outcomes.AssessmentVerdict.REJECT && a.confidence() >= 0.5);
+            if (candidate.status() != CandidateStatus.VALIDATED && candidate.status() != CandidateStatus.ASSESSED) return new AdmissibilityDecision(Outcomes.AdmissibilityOutcome.INADMISSIBLE, "candidate is not validated or assessed", Map.of());
+            boolean rejected = assessments != null && assessments.stream().anyMatch(a -> a.verdict() == Outcomes.AssessmentVerdict.REJECT_VERDICT && a.confidence() >= 0.5);
             if (rejected) return new AdmissibilityDecision(Outcomes.AdmissibilityOutcome.INADMISSIBLE, "candidate has rejecting assessment", Map.of());
             return new AdmissibilityDecision(Outcomes.AdmissibilityOutcome.ADMISSIBLE, "candidate is admissible", Map.of());
         }

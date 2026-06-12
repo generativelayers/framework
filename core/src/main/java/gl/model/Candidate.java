@@ -8,7 +8,8 @@ import java.util.Map;
 
 /** A governed piece of generative output.
  *  Candidates follow a strict lifecycle:
- *  PROPOSED > VALIDATED > ASSESSED > ACCEPTED_BY_AGENT / REJECTED_BY_AGENT.
+ *  VALIDATED / INVALID -> ASSESSED -> ACCEPTED_BY_AGENT / REJECTED_BY_AGENT.
+ *  INVALID candidates cannot be assessed or accepted.
  *  No generated content enters the agent's belief base without explicit acceptance. */
 public record Candidate(
         String candidateId,

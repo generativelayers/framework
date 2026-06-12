@@ -1,112 +1,103 @@
 package gl.adapter;
 
 /**
- * Canonical contract for all Generative Layer commands.
+ * GL v2 Public API -- 13 governed candidate-material lifecycle commands.
  *
- * <p>Both the ASTRA adapter ({@link gl.adapter.astra.AstraAdapter}) and the Jason adapter
- * ({@link gl.adapter.jason.JasonAdapter} + Internal Actions) delegate to this interface.
- * This guarantees that every command has identical name, parameter count,
- * parameter types, and return type -- regardless of the host platform.
+ * <pre>
+ * see > bind > call > result > candidate > check > get
+ *     > judge > decide > accept/reject > knowledge > explain
+ * </pre>
  *
- * <p>Platform-specific differences (ASTRA's {@code @TERM} return vs. Jason's
- * unification) are handled in the thin adapter layer on top of this contract.
+ * <p>Every command either discovers/binds an external resource,
+ * performs a governed call, maps an invocation result into isolated
+ * candidate material, checks or extracts candidate content, records
+ * judgement evidence, computes admissibility, records an accept/reject
+ * decision, exposes accepted GL-side knowledge, or explains the lifecycle.
  *
- * <h3>Commands (16 total)</h3>
- * <table>
- *   <tr><th>Command</th><th>Returns</th><th>Description</th></tr>
- *   <tr><td>{@code configure}</td><td>boolean</td><td>Set a config key/value</td></tr>
- *   <tr><td>{@code use_provider}</td><td>boolean</td><td>Activate provider</td></tr>
- *   <tr><td>{@code providers}</td><td>String</td><td>CSV of available providers</td></tr>
- *   <tr><td>{@code invoke}</td><td>String</td><td>Invoke generative body</td></tr>
- *   <tr><td>{@code invoke_with_beliefs}</td><td>String</td><td>Invoke with belief-RAG context</td></tr>
- *   <tr><td>{@code ask}</td><td>String</td><td>Shorthand LLM ask</td></tr>
- *   <tr><td>{@code valid}</td><td>boolean</td><td>Schema validation check</td></tr>
- *   <tr><td>{@code field}</td><td>String</td><td>Extract result field</td></tr>
- *   <tr><td>{@code candidate}</td><td>String</td><td>Get candidate ID</td></tr>
- *   <tr><td>{@code trace}</td><td>String</td><td>Get trace ID</td></tr>
- *   <tr><td>{@code outcome}</td><td>String</td><td>Get outcome name</td></tr>
- *   <tr><td>{@code knowledge}</td><td>String</td><td>CSV of accepted knowledge</td></tr>
- *   <tr><td>{@code admissible}</td><td>boolean</td><td>Admissibility check</td></tr>
- *   <tr><td>{@code accept}</td><td>boolean</td><td>Accept candidate</td></tr>
- *   <tr><td>{@code reject}</td><td>boolean</td><td>Reject candidate</td></tr>
- *   <tr><td>{@code assess}</td><td>boolean</td><td>Record assessment</td></tr>
- * </table>
+ * <p>Generated material never becomes BDI belief automatically;
+ * BDI adoption remains an explicit host-agent operation.
  */
 public interface ResourceActions {
 
-    // ── Provider lifecycle ──────────────────────────────────────
+    // -- Discovery --
 
-    /** Set a configuration key before activating a provider. */
-    boolean configure(String key, String value);
+    /** Discover available external generative resources.
+     *  Returns structured availability report. */
+    String see();
 
-    /** Activate the provider with accumulated configuration. */
-    boolean use_provider();
+    // -- Binding --
 
-    /** Activate by provider name (shorthand). */
-    boolean use_provider(String providerName);
+    /** Bind an agent to a provider/model/config.
+     *  @return bindingId or ERROR:reason */
+    String bind(String agentId, String provider, String model, String config);
 
-    /** Activate by provider name + model (shorthand). */
-    boolean use_provider(String providerName, String model);
+    // -- Invocation --
 
-    /** Return comma-separated list of available provider names. */
-    String providers();
+    /** Perform one governed external resource invocation.
+     *  Agent identity comes from the binding.
+     *  @return resultId or ERROR:reason */
+    String call(String bindingId, String goalId, String bodyId,
+                String affordance, String prompt, String requiredFields, String context);
 
-    // ── Generative body invocation ──────────────────────────────
+    // -- Result/Candidate inspection --
 
-    /** Invoke a generative body. Returns the result ID. */
-    String invoke(String agentId, String goalId,
-                  String bodyId, String affordance,
-                  String prompt, String requiredCsv);
+    /** Inspect invocation-level outcome (SUCCESS, INVALID_OUTPUT, etc.).
+     *  @return outcome name or ERROR:not_found */
+    String result(String resultId);
 
-    /** Invoke a generative body with belief context prepended to the prompt.
-     *  @param beliefsCsv comma-separated belief strings to inject as RAG context */
-    String invoke_with_beliefs(String agentId, String goalId,
-                               String bodyId, String affordance,
-                               String prompt, String requiredCsv,
-                               String beliefsCsv);
-
-    /** Shorthand: invoke llm.answer with ANSWER affordance. Returns the result ID. */
-    String ask(String agentId, String goalId, String prompt);
-
-    /** Shorthand: invoke llm.answer with ANSWER affordance and a conversation context. Returns the result ID. */
-    String ask(String agentId, String goalId, String prompt, String conversationId);
-
-
-    // ── Result inspection ──────────────────────────────────────
-
-    /** Check whether a result passed schema validation. */
-    boolean valid(String resultId);
-
-    /** Extract a named field from a validated result. */
-    String field(String resultId, String fieldName);
-
-    /** Get the candidate ID associated with a result. */
+    /** Return the candidateId created from an invocation result.
+     *  This is the ontological boundary: InvocationResult > Candidate.
+     *  @return candidateId or ERROR:not_found */
     String candidate(String resultId);
 
-    /** Get the trace ID for auditability. */
-    String trace(String resultId);
+    /** Check governance state of a result or candidate.
+     *  For results: validation (RESULT:VALID or RESULT:INVALID:reasons).
+     *  For candidates: lifecycle status (CANDIDATE:STATUS=X).
+     *  Does NOT compute admissibility -- that is decide().
+     *  @return prefixed status string or ERROR:... */
+    String check(String refId);
 
-    /** Get the outcome name (e.g. VALIDATED, INVALID, GOVERNANCE_DENIED). */
-    String outcome(String resultId);
+    /** Project a field from candidate material.
+     *  Takes candidateId, not resultId.
+     *  @return field value or ERROR:not_found/ERROR:missing_field */
+    String get(String candidateId, String fieldName);
 
-    /** Return accepted knowledge for an agent as semicolon-separated "key=value" entries.
-     *  Each candidate's fields are joined, candidates separated by semicolons.
-     *  Returns "" if no accepted candidates exist. */
+    // -- Assessment --
+
+    /** Record evaluative evidence about a candidate.
+     *  Verdicts: APPROVE, WARN, REJECT_VERDICT, UNCERTAIN.
+     *  @return assessmentId or ERROR:... */
+    String judge(String candidateId, String assessorId, String verdict,
+                 double confidence, String rationale);
+
+    // -- Decision --
+
+    /** Compute decision-readiness under governance rules.
+     *  Does NOT accept or reject -- only reports admissibility.
+     *  @return ADMISSIBLE or INADMISSIBLE:reason or ERROR:not_found */
+    String decide(String candidateId);
+
+    /** Record positive decision with reason. Requires admissibility.
+     *  @return decisionId or ERROR:not_found/ERROR:not_admissible */
+    String accept(String candidateId, String reason);
+
+    /** Record negative decision with reason. Always allowed if candidate exists.
+     *  @return decisionId or ERROR:not_found */
+    String reject(String candidateId, String reason);
+
+    // -- Knowledge --
+
+    /** Return accepted GL-side knowledge for an agent.
+     *  This is NOT the BDI belief base -- it is accepted candidate material
+     *  managed by GL, available as context for later calls.
+     *  @return semicolon-separated field entries or EMPTY */
     String knowledge(String agentId);
 
-    // ── Candidate deliberation ─────────────────────────────────
+    // -- Explanation --
 
-    /** Check whether a candidate passes admissibility. */
-    boolean admissible(String candidateId);
-
-    /** Accept a candidate -- explicit agent adoption. */
-    boolean accept(String candidateId);
-
-    /** Reject a candidate -- agent refuses to adopt. */
-    boolean reject(String candidateId);
-
-    /** Record an assessment. Returns true on success. */
-    boolean assess(String assessorId, String candidateId,
-                   String verdict, double confidence,
-                   String explanation);
+    /** Return trace/audit/explanation for any lifecycle reference.
+     *  Supports result (res_*), candidate (cand_*), assessment (assess_*),
+     *  decision (dec_*), trace (trace_*), and binding (bind_*) IDs.
+     *  @return structured audit string or ERROR:not_found */
+    String explain(String refId);
 }

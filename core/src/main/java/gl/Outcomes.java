@@ -19,6 +19,11 @@ public final class Outcomes {
     /** Outcome of a generation invocation through the kernel. */
     public enum ResultOutcome { SUCCESS, GOVERNANCE_DENIED, GOVERNANCE_ESCALATED, PROVIDER_FAILED, INVALID_OUTPUT, STORED_ONLY }
 
-    /** Verdict rendered by a peer assessor on a candidate. */
-    public enum AssessmentVerdict { ACCEPT, REJECT, UNCERTAIN, NEEDS_EVIDENCE, NEEDS_HUMAN, RETRY }
+    /** Verdict rendered by a peer assessor on a candidate.
+     *  These are evaluative verdicts, NOT accept/reject decisions.
+     *  APPROVE = assessor thinks the candidate is good.
+     *  REJECT_VERDICT = assessor thinks the candidate is bad (distinct from the reject() decision command).
+     *  WARN = assessor flags concerns but does not block.
+     *  UNCERTAIN = assessor cannot determine quality. */
+    public enum AssessmentVerdict { APPROVE, REJECT_VERDICT, WARN, UNCERTAIN }
 }

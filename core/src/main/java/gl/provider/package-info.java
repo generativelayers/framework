@@ -8,7 +8,7 @@
  * <ul>
  *   <li>{@link gl.provider.GeminiProvider} -- Google Gemini REST API
  *       (default model: gemini-2.5-flash)</li>
- *   <li>{@link gl.provider.OpenAiProvider} -- OpenAI-compatible REST API
+ *   <li>{@link gl.provider.ChatCompletionsProvider} -- OpenAI-compatible REST API
  *       (works with OpenAI, Azure, Ollama, etc.)</li>
  * </ul>
  *
@@ -17,15 +17,18 @@
  *   <li>{@link gl.provider.ProviderConfig} -- Immutable configuration:
  *       provider name, model, temperature, max tokens, API key env var</li>
  *   <li>{@link gl.provider.ProviderRegistry} -- Factory registry:
- *       resolves provider name → instance via reflection or custom factory</li>
+ *       resolves provider name > instance via reflection or custom factory</li>
  * </ul>
  *
- * <h2>Usage from Agent Code</h2>
+ * <h2>Usage from Agent Code (GL v2)</h2>
  * <pre>
- *   // ASTRA
- *   gl.use_provider("gemini", "gemini-2.5-flash");
+ *   // Step 1: bind an agent to a provider
+ *   String bid = gl.bind("agent1", "gemini", "gemini-2.5-flash", "");
  *
- *   // Java
+ *   // Step 2: invoke through the binding
+ *   String rid = gl.call(bid, "goal1", "llm.answer", "ANSWER", "prompt", "label", "");
+ *
+ *   // Java: register a custom provider
  *   ProviderRegistry.register("my-llm", config -&gt; new MyProvider(config));
  * </pre>
  *

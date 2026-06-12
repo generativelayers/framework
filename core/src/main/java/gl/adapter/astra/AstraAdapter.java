@@ -5,21 +5,29 @@ import gl.adapter.DirectAdapter;
 import astra.core.Module;
 
 /**
- * ASTRA platform adapter for the Generative Layers framework.
+ * ASTRA platform adapter for the GL v2 framework.
  *
  * <p>All agents in the same MAS share a single {@link DirectAdapter}
- * instance (and thus a single {@link gl.GovernanceKernel}). This
- * ensures that candidate IDs are valid across agents — so one agent
- * can assess another agent's candidate via {@link #assess}.
+ * instance (shared lifecycle stores). Provider bindings are per-agent
+ * via {@code bind()}, but candidates, assessments, and decisions are
+ * globally resolvable -- so one agent can judge another agent's candidate.
+ *
+ * <p>GL v2 -- 13 public commands:
+ * <pre>
+ *   see > bind > call > result > candidate > check > get
+ *       > judge > decide > accept/reject > knowledge > explain
+ * </pre>
  *
  * <p>Usage in .astra files:
  * <pre>
  *   module gl.adapter.astra.AstraAdapter gl;
  *
  *   rule +!main(list args) {
- *       gl.use_provider("gemini");
- *       string resultId = gl.ask("agent", "goal", "Classify: apple");
- *       if (gl.valid(resultId)) { gl.accept(gl.candidate(resultId)); }
+ *       string bid = gl.bind("agent1", "gemini", "gemini-2.5-flash", "");
+ *       string rid = gl.call(bid, "classify", "llm.answer", "ANSWER", "Classify: apple", "label,confidence", "");
+ *       string cid = gl.candidate(rid);
+ *       gl.judge(cid, "agent1", "APPROVE", 0.9, "looks correct");
+ *       if (gl.decide(cid) == "ADMISSIBLE") { gl.accept(cid, "valid classification"); }
  *   }
  * </pre>
  */
@@ -28,49 +36,70 @@ public class AstraAdapter extends Module {
     /** Shared across all agents in the same JVM/MAS. */
     private static final DirectAdapter SHARED = new DirectAdapter();
 
-    // ── Provider lifecycle ──────────────────────────────────────
+    // -- 1. Discovery --
 
-    @ACTION public boolean configure(String key, String value) { return SHARED.configure(key, value); }
-    @ACTION public boolean use_provider() { return SHARED.use_provider(); }
-    @ACTION public boolean use_provider(String name) { return SHARED.use_provider(name); }
-    @ACTION public boolean use_provider(String name, String model) { return SHARED.use_provider(name, model); }
-    @TERM   public String providers() { return SHARED.providers(); }
+    @TERM public String see() { return SHARED.see(); }
 
-    // ── Generative body invocation ─────────────────────────────
+    // -- 2. Binding --
 
-    @TERM public String invoke(String agentId, String goalId, String bodyId,
-                               String affordance, String prompt, String csv) {
-        return SHARED.invoke(agentId, goalId, bodyId, affordance, prompt, csv);
-    }
-    @TERM public String invoke_with_beliefs(String agentId, String goalId, String bodyId,
-                                            String affordance, String prompt, String csv,
-                                            String beliefsCsv) {
-        return SHARED.invoke_with_beliefs(agentId, goalId, bodyId, affordance, prompt, csv, beliefsCsv);
-    }
-    @TERM public String ask(String agentId, String goalId, String prompt) {
-        return SHARED.ask(agentId, goalId, prompt);
-    }
-    @TERM public String ask(String agentId, String goalId, String prompt, String conversationId) {
-        return SHARED.ask(agentId, goalId, prompt, conversationId);
+    @TERM public String bind(String agentId, String provider, String model, String config) {
+        return SHARED.bind(agentId, provider, model, config);
     }
 
+    // -- 3. Invocation --
 
-    // ── Result inspection ──────────────────────────────────────
+    @TERM public String call(String bindingId, String goalId, String bodyId,
+                             String affordance, String prompt, String requiredFields,
+                             String context) {
+        return SHARED.call(bindingId, goalId, bodyId, affordance, prompt, requiredFields, context);
+    }
 
-    @TERM public boolean valid(String resultId) { return SHARED.valid(resultId); }
-    @TERM public String field(String resultId, String fieldName) { return SHARED.field(resultId, fieldName); }
+    // -- 4. Result inspection --
+
+    @TERM public String result(String resultId) { return SHARED.result(resultId); }
+
+    // -- 5. Candidate boundary --
+
     @TERM public String candidate(String resultId) { return SHARED.candidate(resultId); }
-    @TERM public String trace(String resultId) { return SHARED.trace(resultId); }
-    @TERM public String outcome(String resultId) { return SHARED.outcome(resultId); }
+
+    // -- 6. Check --
+
+    @TERM public String check(String refId) { return SHARED.check(refId); }
+
+    // -- 7. Field projection --
+
+    @TERM public String get(String candidateId, String fieldName) {
+        return SHARED.get(candidateId, fieldName);
+    }
+
+    // -- 8. Judge --
+
+    @TERM public String judge(String candidateId, String assessorId, String verdict,
+                              double confidence, String rationale) {
+        return SHARED.judge(candidateId, assessorId, verdict, confidence, rationale);
+    }
+
+    // -- 9. Decide --
+
+    @TERM public String decide(String candidateId) { return SHARED.decide(candidateId); }
+
+    // -- 10. Accept --
+
+    @ACTION public String accept(String candidateId, String reason) {
+        return SHARED.accept(candidateId, reason);
+    }
+
+    // -- 11. Reject --
+
+    @ACTION public String reject(String candidateId, String reason) {
+        return SHARED.reject(candidateId, reason);
+    }
+
+    // -- 12. Knowledge --
+
     @TERM public String knowledge(String agentId) { return SHARED.knowledge(agentId); }
 
-    // ── Candidate deliberation ─────────────────────────────────
+    // -- 13. Explain --
 
-    @TERM   public boolean admissible(String candidateId) { return SHARED.admissible(candidateId); }
-    @ACTION public boolean accept(String candidateId) { return SHARED.accept(candidateId); }
-    @ACTION public boolean reject(String candidateId) { return SHARED.reject(candidateId); }
-    @ACTION public boolean assess(String assessorId, String candidateId,
-                                  String verdict, double confidence, String explanation) {
-        return SHARED.assess(assessorId, candidateId, verdict, confidence, explanation);
-    }
+    @TERM public String explain(String refId) { return SHARED.explain(refId); }
 }

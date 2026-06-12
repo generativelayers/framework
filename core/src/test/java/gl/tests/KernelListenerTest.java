@@ -86,7 +86,7 @@ class KernelListenerTest {
                 "Return label", ResponseSchema.required("s", List.of("label")),
                 GovernanceContext.empty(), Map.of(), ""));
 
-        kernel.acceptCandidate(result.candidateId());
+        kernel.recordDecision(result.candidateId(), DecisionType.ACCEPTED, "test");
         assertTrue(listener.events.stream().anyMatch(e -> e.startsWith("CANDIDATE_ACCEPTED:")));
 
         // Second invocation to test reject
@@ -94,7 +94,7 @@ class KernelListenerTest {
                 null, "a", "g", "r", "t", CandidateType.CANDIDATE_ANSWER,
                 "Return label", ResponseSchema.required("s", List.of("label")),
                 GovernanceContext.empty(), Map.of(), ""));
-        kernel.rejectCandidate(r2.candidateId());
+        kernel.recordDecision(r2.candidateId(), DecisionType.REJECTED, "test");
         assertTrue(listener.events.stream().anyMatch(e -> e.startsWith("CANDIDATE_REJECTED:")));
     }
 
@@ -133,7 +133,7 @@ class KernelListenerTest {
                 .withListener(badListener)
                 .build();
 
-        // Should NOT throw — listener errors are swallowed
+        // Should NOT throw -- listener errors are swallowed
         ResourceResult result = kernel.invoke(new ResourceRequest(
                 null, "a", "g", "r", "t", CandidateType.CANDIDATE_ANSWER,
                 "Return label", ResponseSchema.required("s", List.of("label")),

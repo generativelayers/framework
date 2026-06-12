@@ -37,7 +37,7 @@ public final class AffordanceCoverageTest {
         bodies = GenerativeBodyRuntime.createStandardRegistry(kernel);
     }
 
-    // ─── Affordance → CandidateType mapping ─────────────────────
+    // --- Affordance -> CandidateType mapping ---------------------
 
     @Test
     void answerAffordanceProducesCandidateAnswer() {
@@ -104,7 +104,7 @@ public final class AffordanceCoverageTest {
         assertAffordanceProduces("llm.answer", BodyAffordance.ESCALATE, CandidateType.EXPLANATION);
     }
 
-    // ─── Every affordance produces a trace ──────────────────────
+    // --- Every affordance produces a trace ----------------------
 
     @Test
     void allAffordancesProduceTraces() {
@@ -133,7 +133,7 @@ public final class AffordanceCoverageTest {
         }
     }
 
-    // ─── Helper ─────────────────────────────────────────────────
+    // --- Helper -------------------------------------------------
 
     private void assertAffordanceProduces(String bodyId, BodyAffordance affordance, CandidateType expectedType) {
         InvocationResult result = bodies.require(bodyId).invoke(new BodyInvocation(

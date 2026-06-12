@@ -1,25 +1,15 @@
 package gl.adapter.jason.actions;
-
 import gl.adapter.jason.JasonAdapter;
 import jason.asSemantics.DefaultInternalAction;
 import jason.asSemantics.TransitionSystem;
 import jason.asSemantics.Unifier;
 import jason.asSyntax.*;
 
-/**
- * Jason Internal Action: {@code .gl.adapter.jason.actions.reject(CandidateId)}.
- *
- * <p>Delegates to {@link gl.adapter.ResourceActions#reject(String)}.
- */
+/** gl.adapter.jason.actions.reject -- record negative decision. */
 public class reject extends DefaultInternalAction {
-
-    @Override public int getMinArgs() { return 1; }
-    @Override public int getMaxArgs() { return 1; }
-
-    @Override
-    public Object execute(TransitionSystem ts, Unifier un, Term[] args) throws Exception {
-        checkArguments(args);
+    @Override public Object execute(TransitionSystem ts, Unifier un, Term[] args) throws Exception {
         String candidateId = ((StringTerm) args[0]).getString();
-        return JasonAdapter.instance().reject(candidateId);
+        String reason = ((StringTerm) args[1]).getString();
+        return un.unifies(new StringTermImpl(JasonAdapter.instance().reject(candidateId, reason)), args[2]);
     }
 }

@@ -17,22 +17,19 @@ import java.util.Map;
 /**
  * Universal provider for any service implementing the Chat Completions API.
  *
- * <p>This REST API format — originally defined by OpenAI — is now an industry
+ * <p>This REST API format -- originally defined by OpenAI -- is now an industry
  * standard adopted by Groq, Cerebras, DeepSeek, Together AI, Fireworks,
  * Ollama, LM Studio, and many others. This single class handles them all.
  *
- * <h3>Usage — Known provider (alias):</h3>
+ * <h3>Usage -- Known provider (GL v2):</h3>
  * <pre>
- *   gl.configure("model", "llama-3.3-70b-versatile");
- *   gl.use_provider("groq");
+ *   String bid = gl.bind("agent1", "groq", "llama-3.3-70b-versatile", "");
  * </pre>
  *
- * <h3>Usage — Any custom provider (no framework changes needed):</h3>
+ * <h3>Usage -- Custom endpoint (GL v2):</h3>
  * <pre>
- *   gl.configure("endpoint", "https://api.any-provider.com/v1/chat/completions");
- *   gl.configure("model", "any-model");
- *   gl.configure("apiKeyEnv", "ANY_API_KEY");
- *   gl.use_provider("chatcompletions");
+ *   String bid = gl.bind("agent1", "chatcompletions", "any-model",
+ *       "endpoint=https://api.any-provider.com/v1/chat/completions,apiKeyEnv=ANY_API_KEY");
  * </pre>
  *
  * <h3>Known aliases (convenience shortcuts):</h3>
@@ -46,9 +43,9 @@ import java.util.Map;
  */
 public final class ChatCompletionsProvider implements KernelPorts.GenerativeProvider {
 
-    // ── Known provider aliases → default endpoints ──────────────
-    // Adding a new provider here is optional — users can always
-    // supply a custom endpoint via gl.configure("endpoint", "...").
+    // -- Known provider aliases > default endpoints --------------
+    // Adding a new provider here is optional -- users can always
+    // supply a custom endpoint via bind("agent", "chatcompletions", "model", "endpoint=...").
 
     private static final Map<String, String> KNOWN_ENDPOINTS = Map.of(
             "openai",   "https://api.openai.com/v1/chat/completions",
@@ -80,12 +77,12 @@ public final class ChatCompletionsProvider implements KernelPorts.GenerativeProv
             throw new IllegalStateException(
                     "[GL] No endpoint configured for provider '" + providerName + "'. "
                   + "Either use a known name (" + KNOWN_ENDPOINTS.keySet() + ") "
-                  + "or set a custom endpoint: gl.configure(\"endpoint\", \"https://...\");");
+                  + "or set a custom endpoint in bind() config: \"endpoint=https://...\"");
         }
         this.endpoint = URI.create(ep);
     }
 
-    // ── GenerativeProvider implementation ────────────────────────
+    // -- GenerativeProvider implementation ------------------------
 
     @Override
     public ProviderOutput generate(ResourceRequest request, Blob promptBlob)
@@ -93,13 +90,13 @@ public final class ChatCompletionsProvider implements KernelPorts.GenerativeProv
         if (apiKey == null || apiKey.isBlank()) {
             throw new IllegalStateException(
                     "[GL] API key not set for " + providerName + ". "
-                  + "Set via: gl.configure(\"apiKeyEnv\", \"YOUR_KEY_ENV_VAR\"); "
-                  + "or export " + providerName.toUpperCase() + "_API_KEY");
+                  + "Set env var " + providerName.toUpperCase() + "_API_KEY, "
+                  + "or pass apiKeyEnv in bind() config");
         }
         if (model == null || model.isBlank()) {
             throw new IllegalStateException(
                     "[GL] No model specified. "
-                  + "Set via: gl.configure(\"model\", \"model-name\");");
+                  + "Pass model name in bind(): gl.bind(agent, provider, \"model-name\", config)");
         }
 
         List<String> required = request.schema() != null ? request.schema().requiredFields() : List.of();
@@ -175,7 +172,7 @@ public final class ChatCompletionsProvider implements KernelPorts.GenerativeProv
                 Map.of("status", Integer.toString(response.statusCode())));
     }
 
-    /** Factory method — called by {@link ProviderRegistry} via reflection. */
+    /** Factory method -- called by {@link ProviderRegistry} via reflection. */
     public static KernelPorts.GenerativeProvider create(ProviderConfig config) {
         return new ChatCompletionsProvider(config);
     }

@@ -52,9 +52,17 @@ public final class InMemoryKernelStores {
     }
 
     public static final class Metrics implements KernelPorts.MetricsSink {
-        private final List<String> events = new ArrayList<>();
+        private final List<String> events = java.util.Collections.synchronizedList(new ArrayList<>());
         public void increment(String metricName) { events.add("increment:" + metricName); }
         public void observe(String metricName, double value) { events.add("observe:" + metricName + "=" + value); }
         public List<String> events() { return List.copyOf(events); }
+    }
+
+    public static final class Decisions implements KernelPorts.DecisionStore {
+        private final ConcurrentHashMap<String, Decision> values = new ConcurrentHashMap<>();
+        public Decision put(Decision decision) { values.put(decision.decisionId(), decision); return decision; }
+        public Optional<Decision> get(String decisionId) { return Optional.ofNullable(values.get(decisionId)); }
+        public List<Decision> forCandidate(String candidateId) { return values.values().stream().filter(d -> d.candidateId().equals(candidateId)).toList(); }
+        public List<Decision> all() { return List.copyOf(values.values()); }
     }
 }

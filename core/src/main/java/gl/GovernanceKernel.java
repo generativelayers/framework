@@ -11,9 +11,10 @@ import java.util.concurrent.ConcurrentHashMap;
 
 /** The central governance engine of the Generative Layers framework.
  *
- *  <p>Orchestrates the full pipeline: policy check &gt; provider call &gt;
- *  output validation &gt; candidate creation &gt; assessment &gt; admissibility
- *  &gt; acceptance/rejection. Every step produces auditable traces.
+ *  <p>Performs the governed invocation pipeline: policy check, provider call,
+ *  output validation, candidate creation, and trace recording.
+ *  Assessment, admissibility checking, and accept/reject decisions are
+ *  exposed through later lifecycle commands, not during invocation.
  *
  *  <p>Supports retry/recovery on invalid output, conversation context
  *  for multi-turn dialogues, and event hooks via {@link KernelListener}.
@@ -32,6 +33,7 @@ public final class GovernanceKernel {
     private final KernelPorts.ResultStore results;
     private final KernelPorts.TraceSink traces;
     private final KernelPorts.MetricsSink metrics;
+    private final KernelPorts.DecisionStore decisions;
     private final RetryPolicy retryPolicy;
     private final List<KernelListener> listeners;
     private final ConcurrentHashMap<String, ConversationContext> conversations = new ConcurrentHashMap<>();
@@ -40,16 +42,8 @@ public final class GovernanceKernel {
                      KernelPorts.GovernancePolicy governance, KernelPorts.AdmissibilityChecker admissibility,
                      KernelPorts.BlobStore blobs, KernelPorts.CandidateStore candidates,
                      KernelPorts.AssessmentStore assessments, KernelPorts.ResultStore results,
-                     KernelPorts.TraceSink traces, KernelPorts.MetricsSink metrics) {
-        this(provider, validator, governance, admissibility, blobs, candidates,
-                assessments, results, traces, metrics, RetryPolicy.none(), List.of());
-    }
-
-    public GovernanceKernel(KernelPorts.GenerativeProvider provider, KernelPorts.ResponseValidator validator,
-                     KernelPorts.GovernancePolicy governance, KernelPorts.AdmissibilityChecker admissibility,
-                     KernelPorts.BlobStore blobs, KernelPorts.CandidateStore candidates,
-                     KernelPorts.AssessmentStore assessments, KernelPorts.ResultStore results,
                      KernelPorts.TraceSink traces, KernelPorts.MetricsSink metrics,
+                     KernelPorts.DecisionStore decisions,
                      RetryPolicy retryPolicy, List<KernelListener> listeners) {
         this.provider = Objects.requireNonNull(provider);
         this.validator = Objects.requireNonNull(validator);
@@ -61,21 +55,13 @@ public final class GovernanceKernel {
         this.results = Objects.requireNonNull(results);
         this.traces = Objects.requireNonNull(traces);
         this.metrics = Objects.requireNonNull(metrics);
+        this.decisions = Objects.requireNonNull(decisions);
         this.retryPolicy = retryPolicy == null ? RetryPolicy.none() : retryPolicy;
         this.listeners = listeners == null ? List.of() : List.copyOf(listeners);
     }
 
-    /** Create a new kernel with a different provider but the same stores.
-     *  This allows provider switching mid-session without losing candidates,
-     *  results, or traces from earlier invocations. */
-    public GovernanceKernel withProvider(KernelPorts.GenerativeProvider newProvider) {
-        return new GovernanceKernel(newProvider, validator, governance, admissibility,
-                blobs, candidates, assessments, results, traces, metrics,
-                retryPolicy, listeners);
-    }
-
     public ResourceResult invoke(ResourceRequest request) {
-        metrics.increment("gl.invoke.total");
+        metrics.increment("gl.call.total");
 
         // 1. Policy gate
         PolicyDecision policy = governance.evaluate(request);
@@ -135,7 +121,7 @@ public final class GovernanceKernel {
 
             // Validate
             validation = validator.validate(output.rawText(), request.schema());
-            if (validation.valid()) break; // Success — exit retry loop
+            if (validation.valid()) break; // Success -- exit retry loop
 
             final ValidationResult failedValidation = validation;
             fire(l -> l.onValidationFailed(request, failedValidation));
@@ -163,7 +149,7 @@ public final class GovernanceKernel {
         Outcomes.ResultOutcome outcome = validation.valid() ? Outcomes.ResultOutcome.SUCCESS : Outcomes.ResultOutcome.INVALID_OUTPUT;
         TraceRecord trace = recordTrace(request, promptBlob.blobId(), outputBlob.blobId(),
                 candidate.candidateId(), outcome, policy, validation);
-        metrics.increment(validation.valid() ? "gl.invoke.success" : "gl.invoke.invalid");
+        metrics.increment(validation.valid() ? "gl.call.success" : "gl.call.invalid");
 
         // 5. Record conversation turn on success
         if (validation.valid() && conversation != null) {
@@ -177,24 +163,81 @@ public final class GovernanceKernel {
     }
 
     public Assessment assess(String assessorId, String targetRef, String targetType, Outcomes.AssessmentVerdict verdict, double confidence, List<String> criteria, List<String> evidenceRefs, String explanation) {
-        Assessment assessment = assessments.put(new Assessment(Ids.id("assess"), assessorId, targetRef, targetType, verdict, confidence, criteria, evidenceRefs, explanation, Ids.now()));
-        candidates.get(targetRef).ifPresent(c -> candidates.update(c.withStatus(CandidateStatus.ASSESSED)));
-        metrics.increment("gl.assess.total");
+        // Resolve candidate FIRST -- no assessment record for missing candidates
+        Optional<Candidate> cOpt = resolveCandidate(targetRef);
+        if (cOpt.isEmpty()) return null;
+
+        // Finality guard: do not allow assessment after final decision
+        Candidate c = cOpt.get();
+        if (c.status() == CandidateStatus.ACCEPTED_BY_AGENT
+                || c.status() == CandidateStatus.REJECTED_BY_AGENT) {
+            return null;
+        }
+
+        // INVALID candidates cannot be rehabilitated by assessment
+        if (c.status() == CandidateStatus.INVALID) {
+            return null;
+        }
+
+        // Canonicalise: always store under the candidate's canonical ID
+        Assessment assessment = assessments.put(new Assessment(Ids.id("assess"), assessorId, c.candidateId(), "candidate", verdict, confidence, criteria, evidenceRefs, explanation, Ids.now()));
+        candidates.update(c.withStatus(CandidateStatus.ASSESSED));
+        metrics.increment("gl.judge.total");
         return assessment;
     }
 
     /** Resolve a candidate by candidate ID or result ID.
-     *  Agents commonly pass result IDs to admissible/accept/reject,
+     *  Agents commonly pass result IDs to commands,
      *  so this method transparently resolves both. */
-    private Optional<Candidate> resolveCandidate(String id) {
+    public Optional<Candidate> resolveCandidate(String id) {
+        if (id == null || id.isBlank()) return Optional.empty();
         // 1. Direct lookup by candidate ID
         Optional<Candidate> direct = candidates.get(id);
         if (direct.isPresent()) return direct;
-        // 2. Resolve result ID → candidate
+        // 2. Resolve result ID > candidate
         return candidates.all().stream()
                 .filter(c -> id.equals(c.sourceResultId()))
                 .findFirst();
     }
+
+    /** Record a decision. Candidate MUST exist -- caller verifies first.
+     *  Returns the existing decision if the candidate is already decided.
+     *  Returns Optional.empty() if candidate is not found. */
+    public Optional<Decision> recordDecision(String candidateId, DecisionType type, String reason) {
+        return resolveCandidate(candidateId).map(c -> {
+            // Finality guard: return existing decision if already decided
+            if (c.status() == CandidateStatus.ACCEPTED_BY_AGENT
+                    || c.status() == CandidateStatus.REJECTED_BY_AGENT) {
+                List<Decision> existing = decisions.forCandidate(c.candidateId());
+                return existing.isEmpty() ? null : existing.get(existing.size() - 1);
+            }
+
+            // Kernel-level admissibility enforcement for ACCEPTED decisions
+            if (type == DecisionType.ACCEPTED) {
+                AdmissibilityDecision adm = admissibility.check(c, assessments.forTarget(c.candidateId()));
+                if (adm.outcome() != Outcomes.AdmissibilityOutcome.ADMISSIBLE) {
+                    return null;
+                }
+            }
+
+            Decision d = decisions.put(new Decision(
+                    Ids.id("dec"), c.candidateId(), c.agentId(), type, reason, Ids.now()));
+            CandidateStatus newStatus = type == DecisionType.ACCEPTED
+                    ? CandidateStatus.ACCEPTED_BY_AGENT
+                    : CandidateStatus.REJECTED_BY_AGENT;
+
+            candidates.update(c.withStatus(newStatus));
+            if (type == DecisionType.ACCEPTED) {
+                fire(l -> l.onCandidateAccepted(c.withStatus(newStatus)));
+            } else {
+                fire(l -> l.onCandidateRejected(c.withStatus(newStatus)));
+            }
+            return d;
+        });
+    }
+
+    public KernelPorts.DecisionStore decisionStore() { return decisions; }
+    public KernelPorts.AssessmentStore assessmentStore() { return assessments; }
 
     public AdmissibilityDecision checkAdmissibility(String candidateOrResultId) {
         return resolveCandidate(candidateOrResultId)
@@ -202,28 +245,11 @@ public final class GovernanceKernel {
                 .orElseGet(() -> new AdmissibilityDecision(Outcomes.AdmissibilityOutcome.INADMISSIBLE, "candidate not found", Map.of("id", candidateOrResultId == null ? "" : candidateOrResultId)));
     }
 
-    public Optional<Candidate> acceptCandidate(String candidateOrResultId) {
-        return resolveCandidate(candidateOrResultId).map(c -> {
-            Candidate accepted = candidates.update(c.withStatus(CandidateStatus.ACCEPTED_BY_AGENT));
-            fire(l -> l.onCandidateAccepted(accepted));
-            return accepted;
-        });
-    }
-
-    public Optional<Candidate> rejectCandidate(String candidateOrResultId) {
-        return resolveCandidate(candidateOrResultId).map(c -> {
-            Candidate rejected = candidates.update(c.withStatus(CandidateStatus.REJECTED_BY_AGENT));
-            fire(l -> l.onCandidateRejected(rejected));
-            return rejected;
-        });
-    }
 
     public Optional<ResourceResult> result(String resultId) { return results.get(resultId); }
     public Optional<Candidate> candidate(String candidateOrResultId) { return resolveCandidate(candidateOrResultId); }
     public Optional<Blob> blob(String blobId) { return blobs.get(blobId); }
     public Optional<TraceRecord> trace(String traceId) { return traces.get(traceId); }
-    public boolean valid(String resultId) { return result(resultId).map(ResourceResult::success).orElse(false); }
-    public String field(String resultId, String fieldName) { return result(resultId).map(ResourceResult::validation).map(ValidationResult::fields).map(f -> f.getOrDefault(fieldName, "")).orElse(""); }
     public List<TraceRecord> traces() { return traces.all(); }
     public List<String> metrics() { return metrics.events(); }
 
@@ -232,30 +258,11 @@ public final class GovernanceKernel {
         return conversations.computeIfAbsent(conversationId, ConversationContext::new);
     }
 
-    /** Return accepted knowledge for an agent as semicolon-separated field entries.
-     *  Each candidate's fields are formatted as "key=value,key=value" and candidates
-     *  are separated by ";". Returns "" if no accepted candidates exist. */
-    public String acceptedKnowledge(String agentId) {
-        StringBuilder sb = new StringBuilder();
-        for (Candidate c : candidates.all()) {
-            if (c.status() == CandidateStatus.ACCEPTED_BY_AGENT
-                    && c.agentId().equals(agentId)
-                    && !c.fields().isEmpty()) {
-                if (sb.length() > 0) sb.append(';');
-                c.fields().forEach((k, v) -> {
-                    if (sb.length() > 0 && sb.charAt(sb.length() - 1) != ';') sb.append(',');
-                    sb.append(k).append('=').append(v);
-                });
-            }
-        }
-        return sb.toString();
-    }
-
     private ResourceResult deniedResult(ResourceRequest request, PolicyDecision policy) {
         Outcomes.ResultOutcome outcome = policy.outcome() == Outcomes.PolicyOutcome.ESCALATE ? Outcomes.ResultOutcome.GOVERNANCE_ESCALATED : Outcomes.ResultOutcome.GOVERNANCE_DENIED;
         ValidationResult validation = ValidationResult.invalid(policy.reason(), List.of(policy.reason()));
         TraceRecord trace = recordTrace(request, "", "", "", outcome, policy, validation);
-        metrics.increment("gl.invoke.denied");
+        metrics.increment("gl.call.denied");
         return results.put(new ResourceResult(Ids.id("res"), request.requestId(), outcome, "", "", "", trace.traceId(), validation, policy, policy.reason(), Ids.now()));
     }
 

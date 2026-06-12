@@ -70,6 +70,7 @@ public final class GovernanceKernelFactory {
                     new InMemoryKernelStores.Results(),
                     new InMemoryKernelStores.Traces(),
                     new InMemoryKernelStores.Metrics(),
+                    new InMemoryKernelStores.Decisions(),
                     retryPolicy, List.copyOf(listeners)
             );
         }
