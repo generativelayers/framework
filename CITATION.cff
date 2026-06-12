@@ -1,0 +1,26 @@
+cff-version: 1.2.0
+message: "If you use Generative Layers in your research or software, please cite it using the metadata from this file."
+title: "Generative Layers"
+type: software
+authors:
+  - family-names: "Kyriakidis"
+    given-names: "Dimitrios"
+abstract: >
+  Generative Layers is a Java framework for governed generative resource layers
+  in BDI-first and agent-oriented systems. It supports controlled access to
+  external generative resources such as LLMs, tools, APIs, and services while
+  preserving a boundary between generated candidate material and the host
+  agent platform's internal beliefs, intentions, plans, and actions.
+keywords:
+  - "BDI agents"
+  - "multi-agent systems"
+  - "agent-oriented programming"
+  - "generative AI"
+  - "LLM governance"
+  - "ASTRA"
+  - "Jason"
+  - "JaCaMo"
+license: "Apache-2.0"
+url: "https://www.generativelayers.com"
+repository-code: "https://github.com/generativelayers/framework"
+date-released: "2026-01-01"
