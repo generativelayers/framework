@@ -1,0 +1,9 @@
+agent Main {
+    module Console C;
+    module System system;
+
+    rule +!main(list args) {
+        C.println("Hello from ASTRA on code.generativelayers.com");
+        system.exit();
+    }
+}
