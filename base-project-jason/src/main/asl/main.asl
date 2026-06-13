@@ -4,5 +4,6 @@
 !start.
 
 +!start
-   <- .println("Hello from Jason on code.generativelayers.com");
+   <- gl.see(_);
+      .println("Hello from Jason on code.generativelayers.com");
       .stopMAS.
