@@ -8,6 +8,8 @@ A governance middleware for BDI agents that use Large Language Models. Every LLM
 
 ## Install
 
+Requires **Java 17+**.
+
 ```xml
 <dependency>
     <groupId>com.generativelayers</groupId>
