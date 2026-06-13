@@ -1,7 +1,6 @@
 agent Main {
     module Console C;
     module System system;
-    module gl.astra.GL gl;
 
     rule +!main(list args) {
         C.println("Hello from ASTRA on code.generativelayers.com");
