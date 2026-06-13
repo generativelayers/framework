@@ -10,7 +10,10 @@ import java.util.Map;
  *  Candidates follow a strict lifecycle:
  *  VALIDATED / INVALID -> ASSESSED -> ACCEPTED_BY_AGENT / REJECTED_BY_AGENT.
  *  INVALID candidates cannot be assessed or accepted.
- *  No generated content enters the agent's belief base without explicit acceptance. */
+ *  No generated content enters the agent's belief base without explicit acceptance.
+ *
+ *  <p>{@code lastModifiedAt} tracks when the most recent status transition
+ *  occurred, enabling audit queries like "when was this candidate accepted?" */
 public record Candidate(
         String candidateId,
         CandidateType type,
@@ -21,7 +24,8 @@ public record Candidate(
         String goalId,
         Map<String, String> fields,
         List<String> evidenceRefs,
-        Instant createdAt
+        Instant createdAt,
+        Instant lastModifiedAt
 ) {
     public Candidate {
         candidateId = candidateId == null || candidateId.isBlank() ? Ids.id("cand") : candidateId;
@@ -34,9 +38,11 @@ public record Candidate(
         fields = fields == null ? Map.of() : Map.copyOf(fields);
         evidenceRefs = evidenceRefs == null ? List.of() : List.copyOf(evidenceRefs);
         createdAt = createdAt == null ? Ids.now() : createdAt;
+        lastModifiedAt = lastModifiedAt == null ? createdAt : lastModifiedAt;
     }
 
     public Candidate withStatus(CandidateStatus newStatus) {
-        return new Candidate(candidateId, type, newStatus, sourceResultId, sourceBlobId, agentId, goalId, fields, evidenceRefs, createdAt);
+        return new Candidate(candidateId, type, newStatus, sourceResultId, sourceBlobId,
+                agentId, goalId, fields, evidenceRefs, createdAt, Ids.now());
     }
 }

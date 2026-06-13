@@ -36,6 +36,12 @@ public final class DirectAdapter implements ResourceActions {
     // -- Result-to-binding provenance (exact binding used per call) --
     private final ConcurrentHashMap<String, String> resultToBinding = new ConcurrentHashMap<>();
 
+    // -- Trace-to-result reverse index (O(1) lookup for explainTrace) --
+    private final ConcurrentHashMap<String, String> traceToResult = new ConcurrentHashMap<>();
+
+    // -- Candidate-to-binding reverse index (O(1) lookup for findKernelForCandidate) --
+    private final ConcurrentHashMap<String, String> candidateToBinding = new ConcurrentHashMap<>();
+
     // -- Pluggable governance components --
     private final KernelPorts.ResponseValidator validator;
     private final KernelPorts.GovernancePolicy governance;
@@ -117,6 +123,21 @@ public final class DirectAdapter implements ResourceActions {
                 model == null ? "" : model, kernel, bodies,
                 providerConfig, Ids.now());
 
+        // Cleanup: remove any previous binding for this agent (prevents memory leak on re-bind)
+        // Also clean orphaned resultToBinding entries so provenance lookup doesn't break
+        Set<String> oldBindingIds = new HashSet<>();
+        bindings.values().removeIf(old -> {
+            if (old.agentId().equals(agentId)) {
+                oldBindingIds.add(old.bindingId());
+                return true;
+            }
+            return false;
+        });
+        if (!oldBindingIds.isEmpty()) {
+            resultToBinding.values().removeIf(oldBindingIds::contains);
+            candidateToBinding.values().removeIf(oldBindingIds::contains);
+        }
+
         bindings.put(binding.bindingId(), binding);
         return binding.bindingId();
     }
@@ -133,10 +154,12 @@ public final class DirectAdapter implements ResourceActions {
         // Get agentId from binding
         String agentId = binding.agentId();
 
-        // Parse affordance -- reject invalid values explicitly
+        // Parse affordance -- case-insensitive to prevent silent failures
+        // when agents pass "answer" instead of "ANSWER"
+        if (affordance == null || affordance.isBlank()) return "ERROR:missing_affordance";
         BodyAffordance parsedAff;
         try {
-            parsedAff = BodyAffordance.valueOf(affordance);
+            parsedAff = BodyAffordance.valueOf(affordance.toUpperCase());
         } catch (Exception e) {
             String allowed = Arrays.stream(BodyAffordance.values())
                     .map(Enum::name).collect(Collectors.joining(","));
@@ -187,6 +210,10 @@ public final class DirectAdapter implements ResourceActions {
         InvocationResult invResult = body.invoke(invocation);
         String resultId = invResult.resourceResult().resultId();
         resultToBinding.put(resultId, bindingId);
+        String cId = invResult.resourceResult().candidateId();
+        if (cId != null && !cId.isBlank()) candidateToBinding.put(cId, bindingId);
+        String tId = invResult.resourceResult().traceId();
+        if (tId != null && !tId.isBlank()) traceToResult.put(tId, resultId);
         return resultId;
     }
 
@@ -290,16 +317,18 @@ public final class DirectAdapter implements ResourceActions {
             return "ERROR:not_assessable:INVALID";
         }
 
-        // Validate verdict
+        // Validate verdict -- case-insensitive to prevent silent failures
+        if (verdict == null || verdict.isBlank()) return "ERROR:missing_verdict";
         Outcomes.AssessmentVerdict v;
         try {
-            v = Outcomes.AssessmentVerdict.valueOf(verdict);
+            v = Outcomes.AssessmentVerdict.valueOf(verdict.toUpperCase());
         } catch (Exception e) {
             return "ERROR:invalid_verdict:" + verdict + ":allowed=APPROVE,WARN,REJECT_VERDICT,UNCERTAIN";
         }
 
-        // Validate confidence
-        if (confidence < 0.0 || confidence > 1.0) {
+        // Validate confidence (NaN/Infinity bypass < > comparisons, must check explicitly)
+        if (Double.isNaN(confidence) || Double.isInfinite(confidence)
+                || confidence < 0.0 || confidence > 1.0) {
             return "ERROR:invalid_confidence:" + confidence + ":range=0.0-1.0";
         }
 
@@ -332,11 +361,14 @@ public final class DirectAdapter implements ResourceActions {
         Optional<Candidate> cOpt = candidates.get(candidateId);
         if (cOpt.isEmpty()) return "ERROR:not_found";
 
-        // Final-aware: if already decided, report final state with decision ID
+        // Final-aware: if already decided, return consistent admissibility
+        // so ASTRA context guards (== "ADMISSIBLE") work on re-evaluation
         if (isDecided(cOpt.get())) {
-            List<Decision> existing = decisions.forCandidate(candidateId);
-            String decId = existing.isEmpty() ? "unknown" : existing.get(existing.size() - 1).decisionId();
-            return "FINAL:" + cOpt.get().status().name() + ":" + decId;
+            if (cOpt.get().status() == CandidateStatus.ACCEPTED_BY_AGENT) {
+                return "ADMISSIBLE";
+            } else {
+                return "INADMISSIBLE:already_rejected";
+            }
         }
 
         AdmissibilityDecision decision = admissibilityChecker.check(
@@ -409,18 +441,22 @@ public final class DirectAdapter implements ResourceActions {
     public String knowledge(String agentId) {
         if (agentId == null || agentId.isBlank()) return "EMPTY";
         StringBuilder sb = new StringBuilder();
+        boolean firstEntry = true;
         for (Candidate c : candidates.all()) {
             if (c.status() == CandidateStatus.ACCEPTED_BY_AGENT
                     && c.agentId().equals(agentId)
                     && !c.fields().isEmpty()) {
-                if (sb.length() > 0) sb.append(';');
-                c.fields().forEach((k, v) -> {
-                    if (sb.length() > 0 && sb.charAt(sb.length() - 1) != ';') sb.append(',');
+                if (!firstEntry) sb.append(';');
+                firstEntry = false;
+                boolean firstField = true;
+                for (Map.Entry<String, String> e : c.fields().entrySet()) {
+                    if (!firstField) sb.append(',');
+                    firstField = false;
                     // Sanitize field values: remove semicolons, commas, and newlines
-                    String safeV = v.replace(";", " ").replace(",", " ")
+                    String safeV = e.getValue().replace(";", " ").replace(",", " ")
                             .replace("\n", " ").replace("\r", "");
-                    sb.append(k).append('=').append(safeV);
-                });
+                    sb.append(e.getKey()).append('=').append(safeV);
+                }
             }
         }
         return sb.length() == 0 ? "EMPTY" : sb.toString();
@@ -618,11 +654,8 @@ public final class DirectAdapter implements ResourceActions {
             sb.append(";resource=").append(t.resourceId());
             sb.append(";result=").append(t.outcome().name());
 
-            // -- Provider/model/binding (exact provenance via result > binding) --
-            results.all().stream()
-                    .filter(r -> r.traceId().equals(traceId))
-                    .findFirst()
-                    .map(ResourceResult::resultId)
+            // -- Provider/model/binding (exact provenance via trace > result > binding) --
+            Optional.ofNullable(traceToResult.get(traceId))
                     .map(resultToBinding::get)
                     .map(bindings::get)
                     .ifPresent(b -> {
@@ -661,10 +694,18 @@ public final class DirectAdapter implements ResourceActions {
         }).orElse("ERROR:not_found");
     }
 
-    /** Find any kernel that can resolve this candidate. Since all bindings
-     *  share the same stores, any kernel works -- we pick the first binding. */
+    /** Find the kernel that produced this candidate via result provenance.
+     *  Falls back to any available kernel (stores are shared, so lifecycle
+     *  ops like accept/reject work regardless of which kernel is used). */
     private GovernanceKernel findKernelForCandidate(String candidateId) {
         if (bindings.isEmpty()) return null;
+        // 1. O(1) reverse index: candidate > binding > kernel
+        String bid = candidateToBinding.get(candidateId);
+        if (bid != null) {
+            ProviderBinding b = bindings.get(bid);
+            if (b != null) return b.kernel();
+        }
+        // 2. Fallback: any kernel (shared stores make this safe for lifecycle ops)
         return bindings.values().iterator().next().kernel();
     }
 

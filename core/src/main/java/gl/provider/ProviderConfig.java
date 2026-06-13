@@ -63,7 +63,11 @@ public final class ProviderConfig {
     public double getDouble(String key, double defaultValue) {
         String v = values.get(key);
         if (v == null || v.isBlank()) return defaultValue;
-        try { return Double.parseDouble(v); } catch (NumberFormatException e) { return defaultValue; }
+        try {
+            double d = Double.parseDouble(v);
+            // NaN/Infinity produce invalid JSON (RFC 8259 only allows finite numbers)
+            return (Double.isNaN(d) || Double.isInfinite(d)) ? defaultValue : d;
+        } catch (NumberFormatException e) { return defaultValue; }
     }
 
     public int getInt(String key, int defaultValue) {

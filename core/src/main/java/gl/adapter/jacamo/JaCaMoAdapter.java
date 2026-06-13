@@ -35,13 +35,13 @@ import gl.adapter.DirectAdapter;
  */
 public class JaCaMoAdapter extends Artifact {
 
-    private DirectAdapter adapter;
+    /** Shared across all agents in the same JVM/MAS (same pattern as AstraAdapter). */
+    private static final DirectAdapter SHARED = new DirectAdapter();
 
     // -- Lifecycle -----------------------------------------------
 
     @OPERATION
     public void init() {
-        adapter = new DirectAdapter();
         defineObsProperty("gl_ready", true);
     }
 
@@ -49,7 +49,7 @@ public class JaCaMoAdapter extends Artifact {
 
     @OPERATION
     public void see(OpFeedbackParam<String> result) {
-        result.set(adapter.see());
+        result.set(SHARED.see());
     }
 
     // -- 2. bind --
@@ -57,10 +57,10 @@ public class JaCaMoAdapter extends Artifact {
     @OPERATION
     public void bind(String agentId, String provider, String model, String config,
                      OpFeedbackParam<String> result) {
-        String bindingId = adapter.bind(agentId, provider, model, config);
+        String bindingId = SHARED.bind(agentId, provider, model, config);
         result.set(bindingId);
         if (!bindingId.startsWith("ERROR:")) {
-            defineObsProperty("gl_binding", bindingId, agentId, provider, model);
+            signal("gl_bound", bindingId, agentId, provider, model);
         }
     }
 
@@ -70,39 +70,36 @@ public class JaCaMoAdapter extends Artifact {
     public void call(String bindingId, String goalId, String bodyId,
                      String affordance, String prompt, String requiredFields,
                      String context, OpFeedbackParam<String> result) {
-        String rid = adapter.call(bindingId, goalId, bodyId, affordance, prompt, requiredFields, context);
+        String rid = SHARED.call(bindingId, goalId, bodyId, affordance, prompt, requiredFields, context);
         result.set(rid);
-        if (!rid.startsWith("ERROR:")) {
-            defineObsProperty("gl_result", rid, adapter.result(rid));
-        }
     }
 
     // -- 4. result --
 
     @OPERATION
     public void result(String resultId, OpFeedbackParam<String> result) {
-        result.set(adapter.result(resultId));
+        result.set(SHARED.result(resultId));
     }
 
     // -- 5. candidate --
 
     @OPERATION
     public void candidate(String resultId, OpFeedbackParam<String> result) {
-        result.set(adapter.candidate(resultId));
+        result.set(SHARED.candidate(resultId));
     }
 
     // -- 6. check --
 
     @OPERATION
     public void check(String refId, OpFeedbackParam<String> result) {
-        result.set(adapter.check(refId));
+        result.set(SHARED.check(refId));
     }
 
     // -- 7. get --
 
     @OPERATION
     public void get(String candidateId, String fieldName, OpFeedbackParam<String> result) {
-        result.set(adapter.get(candidateId, fieldName));
+        result.set(SHARED.get(candidateId, fieldName));
     }
 
     // -- 8. judge --
@@ -110,24 +107,24 @@ public class JaCaMoAdapter extends Artifact {
     @OPERATION
     public void judge(String candidateId, String assessorId, String verdict,
                       double confidence, String rationale, OpFeedbackParam<String> result) {
-        result.set(adapter.judge(candidateId, assessorId, verdict, confidence, rationale));
+        result.set(SHARED.judge(candidateId, assessorId, verdict, confidence, rationale));
     }
 
     // -- 9. decide --
 
     @OPERATION
     public void decide(String candidateId, OpFeedbackParam<String> result) {
-        result.set(adapter.decide(candidateId));
+        result.set(SHARED.decide(candidateId));
     }
 
     // -- 10. accept --
 
     @OPERATION
     public void accept(String candidateId, String reason, OpFeedbackParam<String> result) {
-        String decisionId = adapter.accept(candidateId, reason);
+        String decisionId = SHARED.accept(candidateId, reason);
         result.set(decisionId);
         if (!decisionId.startsWith("ERROR:")) {
-            defineObsProperty("gl_accepted", candidateId, decisionId);
+            signal("gl_accepted", candidateId, decisionId);
         }
     }
 
@@ -135,10 +132,10 @@ public class JaCaMoAdapter extends Artifact {
 
     @OPERATION
     public void reject(String candidateId, String reason, OpFeedbackParam<String> result) {
-        String decisionId = adapter.reject(candidateId, reason);
+        String decisionId = SHARED.reject(candidateId, reason);
         result.set(decisionId);
         if (!decisionId.startsWith("ERROR:")) {
-            defineObsProperty("gl_rejected", candidateId, decisionId);
+            signal("gl_rejected", candidateId, decisionId);
         }
     }
 
@@ -146,13 +143,13 @@ public class JaCaMoAdapter extends Artifact {
 
     @OPERATION
     public void knowledge(String agentId, OpFeedbackParam<String> result) {
-        result.set(adapter.knowledge(agentId));
+        result.set(SHARED.knowledge(agentId));
     }
 
     // -- 13. explain --
 
     @OPERATION
     public void explain(String refId, OpFeedbackParam<String> result) {
-        result.set(adapter.explain(refId));
+        result.set(SHARED.explain(refId));
     }
 }

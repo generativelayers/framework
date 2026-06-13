@@ -50,6 +50,8 @@ final class ProviderUtils {
     static String escape(String text) {
         return (text == null ? "" : text)
                 .replace("\\", "\\\\").replace("\"", "\\\"")
-                .replace("\n", "\\n").replace("\r", "\\r");
+                .replace("\n", "\\n").replace("\r", "\\r")
+                .replace("\t", "\\t").replace("\b", "\\b")
+                .replace("\f", "\\f");
     }
 }

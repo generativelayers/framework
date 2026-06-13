@@ -28,7 +28,8 @@ public record Assessment(
         targetRef = targetRef == null ? "" : targetRef;
         targetType = targetType == null ? "" : targetType;
         verdict = verdict == null ? Outcomes.AssessmentVerdict.UNCERTAIN : verdict;
-        confidence = Math.max(0.0, Math.min(1.0, confidence));
+        confidence = Double.isNaN(confidence) || Double.isInfinite(confidence)
+                ? 0.0 : Math.max(0.0, Math.min(1.0, confidence));
         criteria = criteria == null ? List.of() : List.copyOf(criteria);
         evidenceRefs = evidenceRefs == null ? List.of() : List.copyOf(evidenceRefs);
         explanation = explanation == null ? "" : explanation;

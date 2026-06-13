@@ -107,9 +107,12 @@ public final class MASLauncher {
             while (roots.hasMoreElements()) {
                 File dir = new File(roots.nextElement().toURI());
                 if (dir.isDirectory()) {
-                    for (File f : dir.listFiles()) {
-                        if (f.isFile() && f.getName().endsWith(".mas2j")) {
-                            return f.getAbsolutePath();
+                    File[] files = dir.listFiles();
+                    if (files != null) {
+                        for (File f : files) {
+                            if (f.isFile() && f.getName().endsWith(".mas2j")) {
+                                return f.getAbsolutePath();
+                            }
                         }
                     }
                 }

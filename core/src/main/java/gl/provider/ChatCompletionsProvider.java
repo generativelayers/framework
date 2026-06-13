@@ -54,7 +54,10 @@ public final class ChatCompletionsProvider implements KernelPorts.GenerativeProv
             "deepseek", "https://api.deepseek.com/chat/completions"
     );
 
-    private final HttpClient client;
+    /** Shared across all instances — Java HttpClient is designed for reuse. */
+    private static final HttpClient SHARED_CLIENT = HttpClient.newBuilder()
+            .connectTimeout(Duration.ofSeconds(20)).build();
+
     private final URI endpoint;
     private final String apiKey;
     private final String model;
@@ -62,7 +65,6 @@ public final class ChatCompletionsProvider implements KernelPorts.GenerativeProv
     private final double temperature;
 
     public ChatCompletionsProvider(ProviderConfig config) {
-        this.client = HttpClient.newBuilder().connectTimeout(Duration.ofSeconds(20)).build();
         this.model = config.model();
         this.temperature = config.temperature();
         this.apiKey = config.apiKey();
@@ -141,7 +143,7 @@ public final class ChatCompletionsProvider implements KernelPorts.GenerativeProv
         int maxRetries = 4;
         long[] waitSeconds = {15, 30, 45, 60};
         for (int attempt = 0; attempt <= maxRetries; attempt++) {
-            response = client.send(httpRequest, HttpResponse.BodyHandlers.ofString());
+            response = SHARED_CLIENT.send(httpRequest, HttpResponse.BodyHandlers.ofString());
             if (response.statusCode() == 429 && attempt < maxRetries) {
                 System.err.println("[ChatCompletionsProvider] Rate limited (429). "
                         + "Waiting " + waitSeconds[attempt] + "s "

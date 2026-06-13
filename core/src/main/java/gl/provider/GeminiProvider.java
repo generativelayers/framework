@@ -35,7 +35,10 @@ public final class GeminiProvider implements KernelPorts.GenerativeProvider {
     private static final String DEFAULT_MODEL = "gemini-2.5-flash";
     private static final String DEFAULT_ENDPOINT = "https://generativelanguage.googleapis.com";
 
-    private final HttpClient client;
+    /** Shared across all instances — Java HttpClient is designed for reuse. */
+    private static final HttpClient SHARED_CLIENT = HttpClient.newBuilder()
+            .connectTimeout(Duration.ofSeconds(20)).build();
+
     private final String apiKey;
     private final String model;
     private final double temperature;
@@ -43,9 +46,6 @@ public final class GeminiProvider implements KernelPorts.GenerativeProvider {
     private final URI baseUrl;
 
     public GeminiProvider(ProviderConfig config) {
-        this.client = HttpClient.newBuilder()
-                .connectTimeout(Duration.ofSeconds(20))
-                .build();
         this.model = config.model().isEmpty() ? DEFAULT_MODEL : config.model();
         this.temperature = config.temperature();
         this.maxTokens = config.maxTokens();
@@ -121,7 +121,7 @@ public final class GeminiProvider implements KernelPorts.GenerativeProvider {
         int maxRetries = 4;
         long[] waitSeconds = {15, 30, 45, 60};
         for (int attempt = 0; attempt <= maxRetries; attempt++) {
-            resp = client.send(httpRequest, HttpResponse.BodyHandlers.ofString());
+            resp = SHARED_CLIENT.send(httpRequest, HttpResponse.BodyHandlers.ofString());
             if (resp.statusCode() == 429 && attempt < maxRetries) {
                 System.err.println("[GeminiProvider] Rate limited (429). "
                         + "Waiting " + waitSeconds[attempt] + "s "

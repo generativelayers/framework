@@ -10,6 +10,10 @@ public final class GenerativeBodyRegistry {
     private final ConcurrentHashMap<String, GenerativeBody> bodies = new ConcurrentHashMap<>();
 
     public GenerativeBody register(GenerativeBody body) {
+        if (body.descriptor().affordances().isEmpty()) {
+            System.err.println("[GL] WARNING: body '" + body.descriptor().bodyId()
+                    + "' registered with no affordances — all call() requests will fail");
+        }
         bodies.put(body.descriptor().bodyId(), body);
         return body;
     }

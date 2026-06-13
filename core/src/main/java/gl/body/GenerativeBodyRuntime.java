@@ -26,7 +26,7 @@ public final class GenerativeBodyRuntime {
         registry.register(new DefaultGenerativeBody(kernel, new BodyDescriptor("planner.decompose", BodyKind.PLANNER, "Goal decomposition body", List.of(BodyAffordance.DECOMPOSE_GOAL), CandidateType.TASK_DECOMPOSITION, Map.of())));
         registry.register(new DefaultGenerativeBody(kernel, new BodyDescriptor("tool.propose", BodyKind.TOOL_PROPOSER, "Tool proposal body", List.of(BodyAffordance.PROPOSE_TOOL_CALL, BodyAffordance.PROPOSE_ACTION), CandidateType.TOOL_CALL_PROPOSAL, Map.of())));
         registry.register(new DefaultGenerativeBody(kernel, new BodyDescriptor("memory.retrieve", BodyKind.MEMORY, "Memory retrieval body", List.of(BodyAffordance.RETRIEVE_MEMORY), CandidateType.MEMORY_USE, Map.of())));
-        registry.register(new DefaultGenerativeBody(kernel, new BodyDescriptor("reflect.critique", BodyKind.REFLECTOR, "Reflection and critique body", List.of(BodyAffordance.REFLECT, BodyAffordance.CRITIQUE, BodyAffordance.EXPLAIN), CandidateType.REFLECTION_NOTE, Map.of())));
+        registry.register(new DefaultGenerativeBody(kernel, new BodyDescriptor("reflect.critique", BodyKind.REFLECTOR, "Reflection and critique body", List.of(BodyAffordance.REFLECT, BodyAffordance.CRITIQUE, BodyAffordance.EXPLAIN, BodyAffordance.ASSESS, BodyAffordance.ESCALATE), CandidateType.REFLECTION_NOTE, Map.of())));
         return registry;
     }
 }

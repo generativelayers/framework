@@ -23,17 +23,44 @@ public final class InMemoryKernelStores {
 
     public static final class Candidates implements KernelPorts.CandidateStore {
         private final ConcurrentHashMap<String, Candidate> values = new ConcurrentHashMap<>();
-        public Candidate put(Candidate candidate) { values.put(candidate.candidateId(), candidate); return candidate; }
+        /** Reverse index: sourceResultId → candidateId for O(1) lookup. */
+        private final ConcurrentHashMap<String, String> resultIndex = new ConcurrentHashMap<>();
+        public Candidate put(Candidate candidate) {
+            values.put(candidate.candidateId(), candidate);
+            if (!candidate.sourceResultId().isBlank()) {
+                resultIndex.put(candidate.sourceResultId(), candidate.candidateId());
+            }
+            return candidate;
+        }
         public Optional<Candidate> get(String candidateId) { return Optional.ofNullable(values.get(candidateId)); }
+        public Optional<Candidate> byResultId(String resultId) {
+            if (resultId == null || resultId.isBlank()) return Optional.empty();
+            String cid = resultIndex.get(resultId);
+            return cid == null ? Optional.empty() : get(cid);
+        }
         public Candidate update(Candidate candidate) { values.put(candidate.candidateId(), candidate); return candidate; }
         public List<Candidate> all() { return List.copyOf(values.values()); }
     }
 
     public static final class Assessments implements KernelPorts.AssessmentStore {
         private final ConcurrentHashMap<String, Assessment> values = new ConcurrentHashMap<>();
-        public Assessment put(Assessment assessment) { values.put(assessment.assessmentId(), assessment); return assessment; }
+        /** Reverse index: targetRef → list of assessmentIds for O(1) forTarget(). */
+        private final ConcurrentHashMap<String, List<String>> targetIndex = new ConcurrentHashMap<>();
+        public Assessment put(Assessment assessment) {
+            values.put(assessment.assessmentId(), assessment);
+            targetIndex.computeIfAbsent(assessment.targetRef(),
+                    k -> java.util.Collections.synchronizedList(new ArrayList<>()))
+                    .add(assessment.assessmentId());
+            return assessment;
+        }
         public Optional<Assessment> get(String assessmentId) { return Optional.ofNullable(values.get(assessmentId)); }
-        public List<Assessment> forTarget(String targetRef) { return values.values().stream().filter(a -> a.targetRef().equals(targetRef)).toList(); }
+        public List<Assessment> forTarget(String targetRef) {
+            List<String> ids = targetIndex.get(targetRef);
+            if (ids == null) return List.of();
+            synchronized (ids) {
+                return ids.stream().map(values::get).filter(java.util.Objects::nonNull).toList();
+            }
+        }
         public List<Assessment> all() { return List.copyOf(values.values()); }
     }
 
@@ -60,9 +87,23 @@ public final class InMemoryKernelStores {
 
     public static final class Decisions implements KernelPorts.DecisionStore {
         private final ConcurrentHashMap<String, Decision> values = new ConcurrentHashMap<>();
-        public Decision put(Decision decision) { values.put(decision.decisionId(), decision); return decision; }
+        /** Reverse index: candidateId → list of decisionIds for O(1) forCandidate(). */
+        private final ConcurrentHashMap<String, List<String>> candidateIndex = new ConcurrentHashMap<>();
+        public Decision put(Decision decision) {
+            values.put(decision.decisionId(), decision);
+            candidateIndex.computeIfAbsent(decision.candidateId(),
+                    k -> java.util.Collections.synchronizedList(new ArrayList<>()))
+                    .add(decision.decisionId());
+            return decision;
+        }
         public Optional<Decision> get(String decisionId) { return Optional.ofNullable(values.get(decisionId)); }
-        public List<Decision> forCandidate(String candidateId) { return values.values().stream().filter(d -> d.candidateId().equals(candidateId)).toList(); }
+        public List<Decision> forCandidate(String candidateId) {
+            List<String> ids = candidateIndex.get(candidateId);
+            if (ids == null) return List.of();
+            synchronized (ids) {
+                return ids.stream().map(values::get).filter(java.util.Objects::nonNull).toList();
+            }
+        }
         public List<Decision> all() { return List.copyOf(values.values()); }
     }
 }

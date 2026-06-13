@@ -14,20 +14,27 @@ import astra.core.Module;
  *
  * <p>GL v2 -- 13 public commands:
  * <pre>
- *   see > bind > call > result > candidate > check > get
- *       > judge > decide > accept/reject > knowledge > explain
+ *   see &gt; bind &gt; call &gt; result &gt; candidate &gt; check &gt; get
+ *       &gt; judge &gt; decide &gt; accept/reject &gt; knowledge &gt; explain
  * </pre>
  *
- * <p>Usage in .astra files:
+ * <p>Usage in .astra files (via the {@link gl.astra.GL} alias):
  * <pre>
- *   module gl.adapter.astra.AstraAdapter gl;
+ *   module gl.astra.GL gl;
  *
  *   rule +!main(list args) {
- *       string bid = gl.bind("agent1", "gemini", "gemini-2.5-flash", "");
- *       string rid = gl.call(bid, "classify", "llm.answer", "ANSWER", "Classify: apple", "label,confidence", "");
- *       string cid = gl.candidate(rid);
- *       gl.judge(cid, "agent1", "APPROVE", 0.9, "looks correct");
- *       if (gl.decide(cid) == "ADMISSIBLE") { gl.accept(cid, "valid classification"); }
+ *       +binding(gl.bind("agent1", "groq", "llama-3.3-70b-versatile", ""));
+ *       !classify("apple");
+ *   }
+ *
+ *   rule +!classify(string item) : binding(string bid) {
+ *       !evaluate(gl.candidate(gl.call(bid, "classify", "llm.answer",
+ *           "ANSWER", "Classify: " + item, "label,confidence", "")), item);
+ *   }
+ *
+ *   rule +!evaluate(string cid, string item) : gl.decide(cid) == "ADMISSIBLE" {
+ *       gl.accept(cid, "valid classification");
+ *       +classified(item, gl.get(cid, "label"));
  *   }
  * </pre>
  */
@@ -85,14 +92,16 @@ public class AstraAdapter extends Module {
 
     // -- 10. Accept --
 
-    @ACTION public String accept(String candidateId, String reason) {
-        return SHARED.accept(candidateId, reason);
+    @ACTION public boolean accept(String candidateId, String reason) {
+        String result = SHARED.accept(candidateId, reason);
+        return result != null && !result.startsWith("ERROR:");
     }
 
     // -- 11. Reject --
 
-    @ACTION public String reject(String candidateId, String reason) {
-        return SHARED.reject(candidateId, reason);
+    @ACTION public boolean reject(String candidateId, String reason) {
+        String result = SHARED.reject(candidateId, reason);
+        return result != null && !result.startsWith("ERROR:");
     }
 
     // -- 12. Knowledge --

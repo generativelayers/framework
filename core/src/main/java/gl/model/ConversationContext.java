@@ -15,6 +15,10 @@ public final class ConversationContext {
     /** A single turn in the conversation. */
     public record Turn(String role, String content) {}
 
+    /** Maximum number of conversation turns retained. Oldest turns are evicted
+     *  when this limit is exceeded, preventing unbounded prompt/memory growth. */
+    private static final int MAX_TURNS = 20;
+
     private final String contextId;
     private final List<Turn> turns = Collections.synchronizedList(new ArrayList<>());
 
@@ -24,9 +28,13 @@ public final class ConversationContext {
 
     public String contextId() { return contextId; }
 
-    /** Add a turn to the conversation history. */
+    /** Add a turn to the conversation history.
+     *  Evicts oldest turns when the history exceeds {@link #MAX_TURNS}. */
     public void addTurn(String role, String content) {
-        turns.add(new Turn(role, content));
+        synchronized (turns) {
+            turns.add(new Turn(role, content));
+            while (turns.size() > MAX_TURNS) turns.remove(0);
+        }
     }
 
     /** Get an unmodifiable snapshot of the current turns. */

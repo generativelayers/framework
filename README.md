@@ -14,7 +14,7 @@ Requires **Java 17+**.
 <dependency>
     <groupId>com.generativelayers</groupId>
     <artifactId>generative-layers-core</artifactId>
-    <version>0.2.0</version>
+    <version>0.2.1</version>
 </dependency>
 ```
 

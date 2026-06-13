@@ -143,7 +143,7 @@ public final class GovernanceKernel {
         CandidateStatus status = validation.valid() ? CandidateStatus.VALIDATED : CandidateStatus.INVALID;
         Candidate candidate = candidates.put(new Candidate(Ids.id("cand"), request.expectedCandidateType(), status,
                 resultId, outputBlob.blobId(), request.agentId(), request.goalId(),
-                validation.fields(), List.of(outputBlob.blobId()), Ids.now()));
+                validation.fields(), List.of(outputBlob.blobId()), Ids.now(), null));
         fire(l -> l.onCandidateCreated(candidate));
 
         Outcomes.ResultOutcome outcome = validation.valid() ? Outcomes.ResultOutcome.SUCCESS : Outcomes.ResultOutcome.INVALID_OUTPUT;
@@ -162,7 +162,7 @@ public final class GovernanceKernel {
                 validation.message(), Ids.now()));
     }
 
-    public Assessment assess(String assessorId, String targetRef, String targetType, Outcomes.AssessmentVerdict verdict, double confidence, List<String> criteria, List<String> evidenceRefs, String explanation) {
+    public synchronized Assessment assess(String assessorId, String targetRef, String targetType, Outcomes.AssessmentVerdict verdict, double confidence, List<String> criteria, List<String> evidenceRefs, String explanation) {
         // Resolve candidate FIRST -- no assessment record for missing candidates
         Optional<Candidate> cOpt = resolveCandidate(targetRef);
         if (cOpt.isEmpty()) return null;
@@ -188,22 +188,22 @@ public final class GovernanceKernel {
 
     /** Resolve a candidate by candidate ID or result ID.
      *  Agents commonly pass result IDs to commands,
-     *  so this method transparently resolves both. */
+     *  so this method transparently resolves both.
+     *  Uses the reverse index for O(1) result-to-candidate lookup. */
     public Optional<Candidate> resolveCandidate(String id) {
         if (id == null || id.isBlank()) return Optional.empty();
         // 1. Direct lookup by candidate ID
         Optional<Candidate> direct = candidates.get(id);
         if (direct.isPresent()) return direct;
-        // 2. Resolve result ID > candidate
-        return candidates.all().stream()
-                .filter(c -> id.equals(c.sourceResultId()))
-                .findFirst();
+        // 2. Reverse index: result ID > candidate (O(1))
+        return candidates.byResultId(id);
     }
 
     /** Record a decision. Candidate MUST exist -- caller verifies first.
      *  Returns the existing decision if the candidate is already decided.
-     *  Returns Optional.empty() if candidate is not found. */
-    public Optional<Decision> recordDecision(String candidateId, DecisionType type, String reason) {
+     *  Returns Optional.empty() if candidate is not found.
+     *  Synchronized to prevent TOCTOU races in multi-agent MAS. */
+    public synchronized Optional<Decision> recordDecision(String candidateId, DecisionType type, String reason) {
         return resolveCandidate(candidateId).map(c -> {
             // Finality guard: return existing decision if already decided
             if (c.status() == CandidateStatus.ACCEPTED_BY_AGENT

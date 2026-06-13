@@ -56,6 +56,8 @@ public final class KernelPorts {
     public interface CandidateStore {
         Candidate put(Candidate candidate);
         Optional<Candidate> get(String candidateId);
+        /** Reverse lookup: find candidate by the result ID that created it. O(1). */
+        Optional<Candidate> byResultId(String resultId);
         Candidate update(Candidate candidate);
         List<Candidate> all();
     }

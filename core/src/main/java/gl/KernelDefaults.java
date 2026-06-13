@@ -59,7 +59,9 @@ public final class KernelDefaults {
                              .trim();
             }
 
-            // Try parsing as structured JSON using a zero-dependency flat JSON parser
+            // Try parsing as structured JSON using a zero-dependency flat JSON parser.
+            // Handles arrays, nested objects, and unquoted numeric/boolean values
+            // by tracking brace/bracket nesting depth.
             if (clean.startsWith("{") && clean.endsWith("}")) {
                 try {
                     String inner = clean.substring(1, clean.length() - 1).trim();
@@ -68,6 +70,7 @@ public final class KernelDefaults {
                     boolean inQuote = false;
                     boolean isKey = true;
                     boolean escaped = false;
+                    int depth = 0; // nesting depth for [] and {}
 
                     for (int i = 0; i < inner.length(); i++) {
                         char c = inner.charAt(i);
@@ -86,9 +89,15 @@ public final class KernelDefaults {
                             escaped = true;
                         } else if (c == '"') {
                             inQuote = !inQuote;
-                        } else if (c == ':' && !inQuote) {
+                        } else if (!inQuote && (c == '[' || c == '{')) {
+                            depth++;
+                            if (!isKey) val.append(c);
+                        } else if (!inQuote && (c == ']' || c == '}')) {
+                            depth--;
+                            if (!isKey) val.append(c);
+                        } else if (c == ':' && !inQuote && depth == 0 && isKey) {
                             isKey = false;
-                        } else if (c == ',' && !inQuote) {
+                        } else if (c == ',' && !inQuote && depth == 0) {
                             String k = key.toString().trim();
                             String v = val.toString().trim();
                             if (!k.isEmpty()) {
