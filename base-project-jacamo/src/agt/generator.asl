@@ -4,5 +4,8 @@
 !start.
 
 +!start
-   <- .println("Hello from JaCaMo on code.generativelayers.com");
+   <- makeArtifact("gl", "gl.adapter.jacamo.JaCaMoAdapter", [], Gl);
+      focus(Gl);
+      see(_);
+      .println("Hello from JaCaMo on code.generativelayers.com");
       .stopMAS.
