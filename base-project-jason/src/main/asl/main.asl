@@ -1,9 +1,8 @@
-// Jason Hello World with Generative Layers
+// Jason Hello World
 // Run with: mvn compile exec:java
 
 !start.
 
 +!start
-   <- gl.see(_);
-      .println("Hello from Jason on code.generativelayers.com");
+   <- .println("Hello from Jason on code.generativelayers.com");
       .stopMAS.
