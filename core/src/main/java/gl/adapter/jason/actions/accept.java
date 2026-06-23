@@ -10,6 +10,12 @@ public class accept extends DefaultInternalAction {
     @Override public Object execute(TransitionSystem ts, Unifier un, Term[] args) throws Exception {
         String candidateId = ((StringTerm) args[0]).getString();
         String reason = ((StringTerm) args[1]).getString();
-        return un.unifies(new StringTermImpl(JasonAdapter.instance().accept(candidateId, reason)), args[2]);
+        String decisionId = JasonAdapter.instance().accept(candidateId, reason);
+
+        if (decisionId == null || decisionId.startsWith("ERROR:")) {
+            return false;
+        }
+
+        return un.unifies(new StringTermImpl(decisionId), args[2]);
     }
 }
