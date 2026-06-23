@@ -122,10 +122,13 @@ public class JaCaMoAdapter extends Artifact {
     @OPERATION
     public void accept(String candidateId, String reason, OpFeedbackParam<String> result) {
         String decisionId = SHARED.accept(candidateId, reason);
-        result.set(decisionId);
-        if (!decisionId.startsWith("ERROR:")) {
-            signal("gl_accepted", candidateId, decisionId);
+        if (decisionId == null || decisionId.startsWith("ERROR:")) {
+            failed(decisionId == null ? "ERROR:accept_failed" : decisionId);
+            return;
         }
+
+        result.set(decisionId);
+        signal("gl_accepted", candidateId, decisionId);
     }
 
     // -- 11. reject --
@@ -133,10 +136,13 @@ public class JaCaMoAdapter extends Artifact {
     @OPERATION
     public void reject(String candidateId, String reason, OpFeedbackParam<String> result) {
         String decisionId = SHARED.reject(candidateId, reason);
-        result.set(decisionId);
-        if (!decisionId.startsWith("ERROR:")) {
-            signal("gl_rejected", candidateId, decisionId);
+        if (decisionId == null || decisionId.startsWith("ERROR:")) {
+            failed(decisionId == null ? "ERROR:reject_failed" : decisionId);
+            return;
         }
+
+        result.set(decisionId);
+        signal("gl_rejected", candidateId, decisionId);
     }
 
     // -- 12. knowledge --
